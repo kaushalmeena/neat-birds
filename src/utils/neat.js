@@ -17,44 +17,52 @@ export const NODE_TYPES = {
   OUTPUT: "output"
 };
 
-// --- Global innovation bookkeeping ---
+// --- Innovation bookkeeping ---
 // Innovation numbers give every connection gene a historical id, so genomes
 // with different topologies can be aligned gene-by-gene during crossover and
 // compared for speciation. The same structural mutation (same from->to pair)
-// always receives the same innovation number.
-let nextInnovation = 0;
-let nextNodeId = 0;
-const connectionInnovations = new Map();
-// Maps a split connection's innovation to the hidden node id it produced, so
-// the same split in different genomes yields the same node id
-const splitNodeIds = new Map();
+// always receives the same innovation number. All of this shared registry
+// lives on one object so it's easy to find and reason about.
+const innovations = {
+  // Next id to hand out for a new connection / node
+  nextInnovation: 0,
+  nextNodeId: 0,
+  // "from->to" key -> innovation number, so the same connection is consistent
+  connections: new Map(),
+  // split connection's innovation -> hidden node id it produced, so the same
+  // split in different genomes yields the same node id
+  splitNodes: new Map()
+};
 
 function getConnectionInnovation(from, to) {
   const key = `${from}->${to}`;
-  if (!connectionInnovations.has(key)) {
-    connectionInnovations.set(key, nextInnovation);
-    nextInnovation += 1;
+  if (!innovations.connections.has(key)) {
+    innovations.connections.set(key, innovations.nextInnovation);
+    innovations.nextInnovation += 1;
   }
-  return connectionInnovations.get(key);
+  return innovations.connections.get(key);
 }
 
 function getSplitNodeId(innovation) {
-  if (!splitNodeIds.has(innovation)) {
-    splitNodeIds.set(innovation, nextNodeId);
-    nextNodeId += 1;
+  if (!innovations.splitNodes.has(innovation)) {
+    innovations.splitNodes.set(innovation, innovations.nextNodeId);
+    innovations.nextNodeId += 1;
   }
-  return splitNodeIds.get(innovation);
+  return innovations.splitNodes.get(innovation);
 }
 
-// Fast-forwards the global counters past any ids present in the given
+// Fast-forwards the registry counters past any ids present in the given
 // genomes, so mutations after loading a saved population can't collide
 export function syncGenomeCounters(genomes) {
   for (const genome of genomes) {
     for (const node of genome.nodes) {
-      nextNodeId = Math.max(nextNodeId, node.id + 1);
+      innovations.nextNodeId = Math.max(innovations.nextNodeId, node.id + 1);
     }
     for (const conn of genome.connections) {
-      nextInnovation = Math.max(nextInnovation, conn.innovation + 1);
+      innovations.nextInnovation = Math.max(
+        innovations.nextInnovation,
+        conn.innovation + 1
+      );
     }
   }
 }
@@ -80,7 +88,7 @@ export function createGenome(inputCount, outputCount) {
   for (let i = 0; i < outputCount; i += 1) {
     nodes.push({ id: inputCount + 1 + i, type: NODE_TYPES.OUTPUT });
   }
-  nextNodeId = Math.max(nextNodeId, nodes.length);
+  innovations.nextNodeId = Math.max(innovations.nextNodeId, nodes.length);
   for (const from of nodes) {
     if (from.type === NODE_TYPES.OUTPUT) {
       continue;

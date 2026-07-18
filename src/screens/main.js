@@ -113,8 +113,8 @@ function breedNextGeneration() {
     const champion = state.current.deadBirds.reduce((a, b) =>
       b.distance > a.distance ? b : a
     );
-    state.current.bestBrain = createCopy(champion.brain);
-    state.current.bestBrainColor = champion.color;
+    state.current.bestBirdBrain = createCopy(champion.brain);
+    state.current.bestBirdColor = champion.color;
   }
   state.current.bestDistance = Math.max(
     generationBest,
@@ -305,7 +305,7 @@ function drawMainScreen() {
     }
   }
 
-  // Ground and backdrop scroll to match the total distance travelled
+  // Ground and backdrop scroll to match the total distance traveled
   const advance = speed * steps;
   drawBackground(advance);
   drawActivePipes();

@@ -7,8 +7,107 @@ import { syncGenomeCounters } from "../utils/neat";
 import { createPipes, makePipeInactive } from "../utils/pipe";
 import { backgroundImages } from "../utils/sprites";
 
-// Version stamp for exported brain files
-const BRAIN_FILE_VERSION = 1;
+// Version stamp for exported checkpoint files. A checkpoint captures the
+// entire live simulation - every bird (position, velocity, alive/dead,
+// fitness) and pipe - so training resumes from the exact same moment, plus
+// the champion genome so autoplay can replay the best bird from the file.
+const SAVE_FILE_VERSION = 3;
+
+const VALID_COLORS = Object.values(BIRD_COLORS);
+const sanitizeColor = (color) => (VALID_COLORS.includes(color) ? color : null);
+
+// Only the fields that define a bird's state; the transient wing-flap timer
+// is intentionally left out (it would be a stale handle after reload).
+function serializeBird(bird) {
+  return {
+    x: bird.x,
+    y: bird.y,
+    dy: bird.dy,
+    color: bird.color,
+    wing: bird.wing,
+    distance: bird.distance,
+    fitness: bird.fitness,
+    brain: bird.brain
+  };
+}
+
+// Rebuilds a bird from serialized data. createBird deep-copies the brain and
+// zeroes distance/fitness, so those are restored explicitly afterwards.
+function reviveBird(data) {
+  const bird = createBird({
+    x: data.x,
+    y: data.y,
+    dy: data.dy,
+    color: data.color,
+    wing: data.wing,
+    brain: data.brain
+  });
+  bird.distance = data.distance ?? 0;
+  bird.fitness = data.fitness ?? 0;
+  return bird;
+}
+
+function serializePipe(pipe) {
+  return {
+    type: pipe.type,
+    x: pipe.x,
+    y: pipe.y,
+    colorIndex: pipe.colorIndex,
+    active: pipe.active
+  };
+}
+
+function revivePipe(data) {
+  return {
+    type: data.type,
+    x: data.x,
+    y: data.y,
+    colorIndex: data.colorIndex ?? 0,
+    active: Boolean(data.active)
+  };
+}
+
+// Saves data as a JSON file via an anchor download. The browser owns the
+// rest of the flow, and there's no reliable, broadly-supported way to know
+// whether the user actually kept the file, so callers don't claim success.
+// The object URL is revoked on a later tick (not immediately) so the
+// download is handed off before the blob is released - revoking
+// synchronously can abort the save in some browsers.
+function saveJsonFile(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json"
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Opens a file picker and resolves the parsed JSON (or null on cancel/error)
+function pickJsonFile() {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      try {
+        resolve(JSON.parse(await file.text()));
+      } catch {
+        resolve(null);
+      }
+    };
+    input.click();
+  });
+}
 
 export function getBestScore() {
   return Number(localStorage.getItem("bestScore")) || 0;
@@ -22,8 +121,8 @@ export const state = {
     bestDistance: 0,
     // The champion genome seen so far in training; playable in autoplay
     // mode, along with the color the champion bird wore
-    bestBrain: null,
-    bestBrainColor: null,
+    bestBirdBrain: null,
+    bestBirdColor: null,
     // Best distance per generation, for the training fitness chart
     distanceHistory: [],
     speciesCount: 1,
@@ -53,67 +152,119 @@ export function resetState() {
   state.current.pipes.forEach(makePipeInactive);
 }
 
-// Downloads the champion brain as a JSON file
-export function saveBrainToFile() {
-  if (!state.current.bestBrain) {
-    alert("No trained brain to save yet - run training mode first!");
+// Downloads the full training state: every genome in the current population
+// (so the run can be resumed) plus the champion (so autoplay can replay it).
+export function saveStateToFile() {
+  const population = [...state.current.liveBirds, ...state.current.deadBirds];
+  if (population.length === 0) {
+    alert("Nothing to save yet - start training first!");
     return;
   }
-  const payload = {
-    version: BRAIN_FILE_VERSION,
+  // Prefer the recorded champion; otherwise fall back to the farthest bird
+  // in the current population so the file always carries a playable brain
+  let bestBirdBrain = state.current.bestBirdBrain;
+  let bestBirdColor = state.current.bestBirdColor;
+  if (!bestBirdBrain) {
+    const champion = population.reduce((a, b) =>
+      b.distance > a.distance ? b : a
+    );
+    bestBirdBrain = champion.brain;
+    bestBirdColor = champion.color;
+  }
+  saveJsonFile("neat-birds-state.json", {
+    version: SAVE_FILE_VERSION,
+    score: state.current.score,
+    generation: state.current.generation,
     bestDistance: state.current.bestDistance,
-    color: state.current.bestBrainColor,
-    brain: state.current.bestBrain
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: "application/json"
+    speciesCount: state.current.speciesCount,
+    distanceHistory: state.current.distanceHistory,
+    trainingSpeed: state.current.trainingSpeed,
+    backgroundIndex: state.current.backgroundIndex,
+    bestBirdBrain,
+    bestBirdColor,
+    // Full live simulation so a run resumes from the exact same moment
+    liveBirds: state.current.liveBirds.map(serializeBird),
+    deadBirds: state.current.deadBirds.map(serializeBird),
+    pipes: state.current.pipes.map(serializePipe)
   });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "neat-bird-brain.json";
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
-// Opens a file picker and loads a previously exported brain.
-// Calls onLoaded after a successful import (used by autoplay mode to
-// start playing right away); without it a confirmation alert is shown.
-export function loadBrainFromFile(onLoaded) {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "application/json,.json";
-  input.onchange = async () => {
-    const file = input.files[0];
-    if (!file) {
-      return;
-    }
-    try {
-      const payload = JSON.parse(await file.text());
-      if (payload.version !== BRAIN_FILE_VERSION || !payload.brain) {
-        throw new Error("Invalid brain file");
-      }
-      state.current.bestBrain = payload.brain;
-      // Restore the champion's color when the file provides a valid one
-      state.current.bestBrainColor = Object.values(BIRD_COLORS).includes(
-        payload.color
-      )
-        ? payload.color
-        : null;
-      state.current.bestDistance = Math.max(
-        state.current.bestDistance,
-        payload.bestDistance ?? 0
-      );
-      // Keep global NEAT counters ahead of the loaded genome
-      syncGenomeCounters([payload.brain]);
-      if (onLoaded) {
-        onLoaded();
-      } else {
-        alert("Brain successfully loaded!");
-      }
-    } catch {
-      alert("That file is not a valid brain export!");
-    }
-  };
-  input.click();
+// A full training checkpoint has the live simulation arrays
+function isTrainingCheckpoint(payload) {
+  return (
+    payload &&
+    payload.version === SAVE_FILE_VERSION &&
+    Array.isArray(payload.liveBirds) &&
+    Array.isArray(payload.deadBirds) &&
+    Array.isArray(payload.pipes) &&
+    payload.liveBirds.length + payload.deadBirds.length > 0
+  );
+}
+
+// Restores the entire simulation from a checkpoint so training continues
+// from the exact saved moment. Calls onLoaded on success.
+export async function loadStateForTraining(onLoaded) {
+  const payload = await pickJsonFile();
+  if (payload === null) {
+    return;
+  }
+  if (!isTrainingCheckpoint(payload)) {
+    alert("That file is not a valid training state!");
+    return;
+  }
+  state.current.score = payload.score ?? 0;
+  state.current.generation = payload.generation ?? 1;
+  state.current.bestDistance = payload.bestDistance ?? 0;
+  state.current.speciesCount = payload.speciesCount ?? 1;
+  state.current.distanceHistory = Array.isArray(payload.distanceHistory)
+    ? payload.distanceHistory
+    : [];
+  if (typeof payload.trainingSpeed === "number") {
+    state.current.trainingSpeed = payload.trainingSpeed;
+  }
+  if (typeof payload.backgroundIndex === "number") {
+    state.current.backgroundIndex = payload.backgroundIndex;
+  }
+  state.current.bestBirdBrain = payload.bestBirdBrain ?? null;
+  state.current.bestBirdColor = sanitizeColor(payload.bestBirdColor);
+  state.current.liveBirds = payload.liveBirds.map(reviveBird);
+  state.current.deadBirds = payload.deadBirds.map(reviveBird);
+  state.current.pipes = payload.pipes.map(revivePipe);
+  // Keep NEAT counters ahead of every loaded genome
+  syncGenomeCounters(
+    [...state.current.liveBirds, ...state.current.deadBirds].map(
+      (bird) => bird.brain
+    )
+  );
+  // Note: no resetState() - the whole point is to resume exactly as saved
+  if (onLoaded) {
+    onLoaded();
+  }
+}
+
+// Loads only the champion brain from a checkpoint, for autoplay.
+// Calls onLoaded on success (autoplay starts playing right away).
+export async function loadBrainForAutoplay(onLoaded) {
+  const payload = await pickJsonFile();
+  if (payload === null) {
+    return;
+  }
+  if (
+    !payload ||
+    payload.version !== SAVE_FILE_VERSION ||
+    !payload.bestBirdBrain
+  ) {
+    alert("That file has no playable brain!");
+    return;
+  }
+  state.current.bestBirdBrain = payload.bestBirdBrain;
+  state.current.bestBirdColor = sanitizeColor(payload.bestBirdColor);
+  state.current.bestDistance = Math.max(
+    state.current.bestDistance,
+    payload.bestDistance ?? 0
+  );
+  syncGenomeCounters([payload.bestBirdBrain]);
+  if (onLoaded) {
+    onLoaded();
+  }
 }

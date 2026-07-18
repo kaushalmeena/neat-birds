@@ -13,7 +13,7 @@ function drawTitleScreen() {
   context.fillStyle = "#3196ca";
   context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   drawText("NEAT", 110, 70, { size: 72, lineWidth: 5 });
-  drawText("BIRDS", 110, 145, { size: 56, lineWidth: 5 });
+  drawText("BIRDS", 110, 145, { size: 57, lineWidth: 5 });
   MODE_LABELS.forEach(([mode, label], index) => {
     drawText(
       `${state.current.mode === mode ? ">" : " "}${label}`,

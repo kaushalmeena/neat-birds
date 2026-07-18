@@ -32,8 +32,8 @@ export const ACTIONS = {
   PAUSE_GAME: "pause_game",
   RESUME_GAME: "resume_game",
   QUIT_GAME: "quit_game",
-  LOAD_BRAIN: "load_brain",
-  SAVE_BRAIN: "save_brain",
+  LOAD_STATE: "load_state",
+  SAVE_STATE: "save_state",
   TOGGLE_MODE: "toggle_mode",
   FLAP_WING: "flap_wing",
   CYCLE_SPEED: "cycle_speed"

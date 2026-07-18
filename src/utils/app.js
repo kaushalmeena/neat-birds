@@ -1,9 +1,10 @@
 import { ACTIONS, MODES, SCREENS, TRAINING_SPEEDS } from "../constants/app";
 import { BIRD_COLORS } from "../constants/bird";
 import {
-  loadBrainFromFile,
+  loadBrainForAutoplay,
+  loadStateForTraining,
   resetState,
-  saveBrainToFile,
+  saveStateToFile,
   state
 } from "../state";
 import { flap } from "./bird";
@@ -25,16 +26,16 @@ function randomizeAppearance() {
 // Enter the main screen; in autoplay mode the player bird gets a copy
 // of the loaded brain (and refuses to start when there is none)
 function startGame() {
-  if (state.current.mode === MODES.AUTOPLAY && !state.current.bestBrain) {
+  if (state.current.mode === MODES.AUTOPLAY && !state.current.bestBirdBrain) {
     alert("No brain loaded yet - upload a brain file first!");
     return;
   }
   randomizeAppearance();
   if (state.current.mode === MODES.AUTOPLAY) {
-    state.current.playerBird.brain = createCopy(state.current.bestBrain);
+    state.current.playerBird.brain = createCopy(state.current.bestBirdBrain);
     // The autoplay bird wears the color its brain was trained in
-    if (state.current.bestBrainColor) {
-      state.current.playerBird.color = state.current.bestBrainColor;
+    if (state.current.bestBirdColor) {
+      state.current.playerBird.color = state.current.bestBirdColor;
     }
   }
   state.current.activeScreen = SCREENS.MAIN;
@@ -44,10 +45,10 @@ function startGame() {
 export function performAction(action) {
   switch (action) {
     case ACTIONS.START_GAME:
-      // Starting autoplay prompts for a brain file, then plays it;
+      // Starting autoplay prompts for a saved file and plays its champion;
       // restarts below reuse the brain that is already loaded
       if (state.current.mode === MODES.AUTOPLAY) {
-        loadBrainFromFile(startGame);
+        loadBrainForAutoplay(startGame);
       } else {
         startGame();
       }
@@ -66,11 +67,14 @@ export function performAction(action) {
     case ACTIONS.RESUME_GAME:
       state.current.activeScreen = SCREENS.MAIN;
       break;
-    case ACTIONS.SAVE_BRAIN:
-      saveBrainToFile();
+    case ACTIONS.SAVE_STATE:
+      saveStateToFile();
       break;
-    case ACTIONS.LOAD_BRAIN:
-      loadBrainFromFile();
+    case ACTIONS.LOAD_STATE:
+      // Restore the whole population and resume training on the main screen
+      loadStateForTraining(() => {
+        state.current.activeScreen = SCREENS.MAIN;
+      });
       break;
     case ACTIONS.TOGGLE_MODE:
       state.current.mode =

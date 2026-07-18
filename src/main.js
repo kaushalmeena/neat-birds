@@ -14,6 +14,7 @@ import { state } from "./state";
 import { performAction } from "./utils/app";
 import { canvas, context } from "./utils/canvas";
 import { isPointInside } from "./utils/helper";
+import { getPauseMenuItems } from "./utils/menu";
 
 import "./style.css";
 
@@ -77,24 +78,23 @@ function setup() {
           performAction(ACTIONS.QUIT_GAME);
         }
         break;
-      case SCREENS.PAUSE:
-        // When 'RESUME' is clicked
-        if (isPointInside(x, y, 178, 180, 144, 24)) {
-          performAction(ACTIONS.RESUME_GAME);
-        }
-        // When 'SAVE BRAIN' is clicked
-        else if (isPointInside(x, y, 130, 220, 240, 24)) {
-          performAction(ACTIONS.SAVE_BRAIN);
-        }
-        // When 'LOAD BRAIN' is clicked
-        else if (isPointInside(x, y, 130, 260, 240, 24)) {
-          performAction(ACTIONS.LOAD_BRAIN);
-        }
-        // When 'QUIT' is clicked
-        else if (isPointInside(x, y, 202, 296, 96, 24)) {
-          performAction(ACTIONS.QUIT_GAME);
+      case SCREENS.PAUSE: {
+        // Menu items vary by mode, so hit-test the same list the screen draws
+        const item = getPauseMenuItems(state.current.mode).find((menuItem) =>
+          isPointInside(
+            x,
+            y,
+            menuItem.x,
+            menuItem.y,
+            menuItem.width,
+            menuItem.height
+          )
+        );
+        if (item) {
+          performAction(item.action);
         }
         break;
+      }
       default:
     }
   };
