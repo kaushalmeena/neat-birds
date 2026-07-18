@@ -1,0 +1,25 @@
+{
+  "name": "neat-birds",
+  "version": "1.0.0",
+  "description": "A flappy bird like game, trainable using neuroevolution algorithms.",
+  "type": "module",
+  "repository": "git@github.com:kaushalmeena/neat-birds.git",
+  "author": "Kaushal Meena <kaushal.meena1996@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint ./src",
+    "lint:fix": "eslint ./src --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5",
+    "vite": "^8.1.5"
+  }
+}
