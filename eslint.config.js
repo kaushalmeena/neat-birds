@@ -1,12 +1,14 @@
 import js from "@eslint/js";
 import prettierRecommended from "eslint-plugin-prettier/recommended";
 import globals from "globals";
+import tseslint from "typescript-eslint";
 
-export default [
+export default tseslint.config(
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   prettierRecommended,
   {
-    files: ["src/**/*.js"],
+    files: ["src/**/*.ts"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -15,10 +17,13 @@ export default [
       }
     },
     rules: {
-      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_" }
+      ],
       eqeqeq: "error",
       "prefer-const": "error",
       "no-var": "error"
     }
   }
-];
+);

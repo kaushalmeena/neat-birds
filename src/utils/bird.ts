@@ -1,6 +1,6 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH, GROUND_HEIGHT } from "../constants/app";
 import {
-  BIRD_COLORS,
+  BirdColor,
   BIRD_FLAP_TIMEOUT,
   BIRD_FALL_SPEED,
   BIRD_HEIGHT,
@@ -9,43 +9,57 @@ import {
   BIRD_START_X,
   BIRD_START_Y,
   BIRD_WIDTH,
-  BIRD_WINGS
+  Wing
 } from "../constants/bird";
 import { INPUT_COUNT, OUTPUT_COUNT } from "../constants/neat";
-import { PIPE_HEIGHT, PIPE_TYPES, PIPE_WIDTH } from "../constants/pipe";
+import { PIPE_HEIGHT, PipeType, PIPE_WIDTH } from "../constants/pipe";
+import type { Bird, Pipe } from "../types";
+import type { Genome } from "./neat";
 import { context } from "./canvas";
 import { createCopy, isRectangleOverlapping, normalizeValue } from "./helper";
 import { createGenome, feedForward } from "./neat";
 import { birdSprites } from "./sprites";
 
+interface CreateBirdOptions {
+  x?: number;
+  y?: number;
+  dy?: number;
+  color?: BirdColor;
+  wing?: Wing;
+  brain?: Genome;
+}
+
 // Function to create a bird object with specified or default properties
-export function createBird({ x, y, dy, color, wing, brain } = {}) {
-  const bird = {};
-  // Color of bird (default to green)
-  bird.color = color ?? BIRD_COLORS.GREEN;
-  // Wing of bird (default to down)
-  bird.wing = wing ?? BIRD_WINGS.DOWN;
-  // Coordinates of bird (default to start position)
-  bird.x = x ?? BIRD_START_X;
-  bird.y = y ?? BIRD_START_Y;
-  // Vertical velocity of bird (default to 0)
-  bird.dy = dy ?? 0;
-  // Brain of bird (contains NEAT genome data)
-  if (brain) {
-    // Create copy of brain to avoid reference problems
-    bird.brain = createCopy(brain);
-  } else {
-    bird.brain = createGenome(INPUT_COUNT, OUTPUT_COUNT);
-  }
-  // Distance is how many frames it's been alive
-  bird.distance = 0;
-  // Fitness is normalized version of distance
-  bird.fitness = 0;
-  return bird;
+export function createBird({
+  x,
+  y,
+  dy,
+  color,
+  wing,
+  brain
+}: CreateBirdOptions = {}): Bird {
+  return {
+    // Color of bird (default to green)
+    color: color ?? BirdColor.GREEN,
+    // Wing of bird (default to down)
+    wing: wing ?? Wing.DOWN,
+    // Coordinates of bird (default to start position)
+    x: x ?? BIRD_START_X,
+    y: y ?? BIRD_START_Y,
+    // Vertical velocity of bird (default to 0)
+    dy: dy ?? 0,
+    // Brain of bird (contains NEAT genome data); copy a given brain to
+    // avoid reference problems, otherwise start from a fresh genome
+    brain: brain ? createCopy(brain) : createGenome(INPUT_COUNT, OUTPUT_COUNT),
+    // Distance is how many frames it's been alive
+    distance: 0,
+    // Fitness is normalized version of distance
+    fitness: 0
+  };
 }
 
 // Function to update the position of a bird based on its velocity
-export function updateBird(bird) {
+export function updateBird(bird: Bird): void {
   bird.dy += BIRD_FALL_SPEED;
   // Prevent bird going offscreen by flapping
   if (bird.y + bird.dy > 0) {
@@ -57,7 +71,7 @@ export function updateBird(bird) {
 
 // Function to draw a bird on the canvas, tilted up when rising
 // and progressively nose-down as it falls
-export function drawBird(bird) {
+export function drawBird(bird: Bird): void {
   const sprite = birdSprites[bird.color][bird.wing];
   const angle = Math.min(Math.max(bird.dy * 0.08, -0.4), 0.9);
   context.save();
@@ -78,33 +92,33 @@ export function drawBird(bird) {
 }
 
 // Function to simulate the bird flapping its wings
-export function flap(bird) {
+export function flap(bird: Bird): void {
   // Each bird tracks its own wing timer, otherwise birds flapping in the
   // same window would cancel each other's wing animation
   clearTimeout(bird.wingTimeout);
   bird.dy = BIRD_FLAP_LIFT;
-  bird.wing = BIRD_WINGS.UP;
+  bird.wing = Wing.UP;
   bird.wingTimeout = setTimeout(() => {
-    bird.wing = BIRD_WINGS.DOWN;
+    bird.wing = Wing.DOWN;
   }, BIRD_FLAP_TIMEOUT);
 }
 
 // Function to reset a bird back to its starting position and stats
-export function resetBird(bird) {
+export function resetBird(bird: Bird): void {
   bird.x = BIRD_START_X;
   bird.y = BIRD_START_Y;
   bird.dy = 0;
-  bird.wing = BIRD_WINGS.DOWN;
+  bird.wing = Wing.DOWN;
   bird.distance = 0;
   bird.fitness = 0;
 }
 
 // Function for the bird to make decisions based on the current environment (pipes)
-export function think(bird, pipes) {
+export function think(bird: Bird, pipes: Pipe[]): void {
   // Find the closest pipe ahead - a pipe counts as ahead until its
   // trailing edge passes the bird, so the bird keeps reacting to the
   // pipe it is currently passing through
-  let closestPipe = null;
+  let closestPipe: Pipe | null = null;
   let minDistance = Number.POSITIVE_INFINITY;
   for (let i = 0; i < pipes.length; i += 1) {
     // Check if pipe is active
@@ -117,7 +131,7 @@ export function think(bird, pipes) {
     }
   }
   if (closestPipe) {
-    const inputs = [];
+    const inputs: number[] = [];
     const relativeX = closestPipe.x - bird.x;
     const relativeY = closestPipe.y - bird.y;
     // Distance in the Y axis from the bird to the top of the screen
@@ -128,12 +142,12 @@ export function think(bird, pipes) {
     inputs[2] = normalizeValue(relativeX, 0, CANVAS_WIDTH);
     // Distance in the Y axis from the bird to the highest point of the pipe in the top
     inputs[3] =
-      closestPipe.type === PIPE_TYPES.LOWER
+      closestPipe.type === PipeType.LOWER
         ? inputs[0]
         : normalizeValue(relativeY + PIPE_HEIGHT, 0, CANVAS_HEIGHT);
     // Distance in the Y axis form the bird to the lowest point of the pipe in the bottom
     inputs[4] =
-      closestPipe.type === PIPE_TYPES.LOWER
+      closestPipe.type === PipeType.LOWER
         ? normalizeValue(relativeY, 0, CANVAS_HEIGHT)
         : inputs[1];
     // Get the output from the network and decide to flap or not!
@@ -145,7 +159,7 @@ export function think(bird, pipes) {
 }
 
 // Function to check if bird has hit the ground or collided with a pipe
-export function isBirdDead(bird, pipes) {
+export function isBirdDead(bird: Bird, pipes: Pipe[]): boolean {
   // If bird has hit the ground
   if (
     bird.y + BIRD_HEIGHT - BIRD_HITBOX_INSET >

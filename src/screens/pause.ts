@@ -3,7 +3,7 @@ import { state } from "../state";
 import { context, drawText } from "../utils/canvas";
 import { getPauseMenuItems } from "../utils/menu";
 
-function drawPauseScreen() {
+function drawPauseScreen(): void {
   context.textBaseline = "top";
   context.fillStyle = "#3196ca";
   context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);

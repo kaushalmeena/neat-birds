@@ -26,10 +26,10 @@ export const PIPE_SPEED = 2;
 export const PIPE_SPEED_RAMP = 0.05;
 export const PIPE_MAX_SPEED = 4;
 
-export const PIPE_TYPES = {
-  UPPER: "upper",
-  LOWER: "lower"
-};
+export enum PipeType {
+  UPPER = "upper",
+  LOWER = "lower"
+}
 
 // Number of pipe color variants in the spritesheet
 export const PIPE_COLOR_COUNT = 8;

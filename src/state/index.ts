@@ -1,5 +1,6 @@
-import { MODES, SCREENS } from "../constants/app";
-import { BIRD_COLORS } from "../constants/bird";
+import { Mode, Screen } from "../constants/app";
+import { BirdColor } from "../constants/bird";
+import type { Bird, GameState, Pipe } from "../types";
 import { createBird, resetBird } from "../utils/bird";
 import { createPopulation } from "../utils/ga";
 import { getRandomInteger } from "../utils/helper";
@@ -13,12 +14,13 @@ import { backgroundImages } from "../utils/sprites";
 // the champion genome so autoplay can replay the best bird from the file.
 const SAVE_FILE_VERSION = 3;
 
-const VALID_COLORS = Object.values(BIRD_COLORS);
-const sanitizeColor = (color) => (VALID_COLORS.includes(color) ? color : null);
+const VALID_COLORS: BirdColor[] = Object.values(BirdColor);
+const sanitizeColor = (color: unknown): BirdColor | null =>
+  VALID_COLORS.includes(color as BirdColor) ? (color as BirdColor) : null;
 
 // Only the fields that define a bird's state; the transient wing-flap timer
 // is intentionally left out (it would be a stale handle after reload).
-function serializeBird(bird) {
+function serializeBird(bird: Bird) {
   return {
     x: bird.x,
     y: bird.y,
@@ -33,7 +35,7 @@ function serializeBird(bird) {
 
 // Rebuilds a bird from serialized data. createBird deep-copies the brain and
 // zeroes distance/fitness, so those are restored explicitly afterwards.
-function reviveBird(data) {
+function reviveBird(data: ReturnType<typeof serializeBird>): Bird {
   const bird = createBird({
     x: data.x,
     y: data.y,
@@ -47,7 +49,7 @@ function reviveBird(data) {
   return bird;
 }
 
-function serializePipe(pipe) {
+function serializePipe(pipe: Pipe) {
   return {
     type: pipe.type,
     x: pipe.x,
@@ -57,7 +59,7 @@ function serializePipe(pipe) {
   };
 }
 
-function revivePipe(data) {
+function revivePipe(data: ReturnType<typeof serializePipe>): Pipe {
   return {
     type: data.type,
     x: data.x,
@@ -73,7 +75,7 @@ function revivePipe(data) {
 // The object URL is revoked on a later tick (not immediately) so the
 // download is handed off before the blob is released - revoking
 // synchronously can abort the save in some browsers.
-function saveJsonFile(filename, data) {
+function saveJsonFile(filename: string, data: unknown): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json"
   });
@@ -87,14 +89,16 @@ function saveJsonFile(filename, data) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Opens a file picker and resolves the parsed JSON (or null on cancel/error)
-function pickJsonFile() {
+// Opens a file picker and resolves the parsed JSON (or null on cancel/error).
+// The result is untyped external data, so `any` is the honest type here.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pickJsonFile(): Promise<any> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json,.json";
     input.onchange = async () => {
-      const file = input.files[0];
+      const file = input.files?.[0];
       if (!file) {
         resolve(null);
         return;
@@ -109,11 +113,11 @@ function pickJsonFile() {
   });
 }
 
-export function getBestScore() {
+export function getBestScore(): number {
   return Number(localStorage.getItem("bestScore")) || 0;
 }
 
-export const state = {
+export const state: { current: GameState } = {
   current: {
     score: 0,
     generation: 1,
@@ -128,8 +132,8 @@ export const state = {
     speciesCount: 1,
     // Simulation steps per frame in training mode (fast-forward)
     trainingSpeed: 1,
-    mode: MODES.STANDARD,
-    activeScreen: SCREENS.TITLE,
+    mode: Mode.STANDARD,
+    activeScreen: Screen.TITLE,
     // Which backdrop is in use; re-rolled when a game starts
     backgroundIndex: getRandomInteger(0, backgroundImages.length - 1),
     playerBird: createBird(),
@@ -139,12 +143,12 @@ export const state = {
   }
 };
 
-export function setBestScore(score) {
+export function setBestScore(score: number): void {
   state.current.bestScore = score;
-  localStorage.setItem("bestScore", score);
+  localStorage.setItem("bestScore", String(score));
 }
 
-export function resetState() {
+export function resetState(): void {
   state.current.score = 0;
   resetBird(state.current.playerBird);
   // Reset any birds still alive (e.g. when quitting training mid-generation)
@@ -154,7 +158,7 @@ export function resetState() {
 
 // Downloads the full training state: every genome in the current population
 // (so the run can be resumed) plus the champion (so autoplay can replay it).
-export function saveStateToFile() {
+export function saveStateToFile(): void {
   const population = [...state.current.liveBirds, ...state.current.deadBirds];
   if (population.length === 0) {
     alert("Nothing to save yet - start training first!");
@@ -190,7 +194,8 @@ export function saveStateToFile() {
 }
 
 // A full training checkpoint has the live simulation arrays
-function isTrainingCheckpoint(payload) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isTrainingCheckpoint(payload: any): boolean {
   return (
     payload &&
     payload.version === SAVE_FILE_VERSION &&
@@ -203,7 +208,9 @@ function isTrainingCheckpoint(payload) {
 
 // Restores the entire simulation from a checkpoint so training continues
 // from the exact saved moment. Calls onLoaded on success.
-export async function loadStateForTraining(onLoaded) {
+export async function loadStateForTraining(
+  onLoaded?: () => void
+): Promise<void> {
   const payload = await pickJsonFile();
   if (payload === null) {
     return;
@@ -237,14 +244,14 @@ export async function loadStateForTraining(onLoaded) {
     )
   );
   // Note: no resetState() - the whole point is to resume exactly as saved
-  if (onLoaded) {
-    onLoaded();
-  }
+  onLoaded?.();
 }
 
 // Loads only the champion brain from a checkpoint, for autoplay.
 // Calls onLoaded on success (autoplay starts playing right away).
-export async function loadBrainForAutoplay(onLoaded) {
+export async function loadBrainForAutoplay(
+  onLoaded?: () => void
+): Promise<void> {
   const payload = await pickJsonFile();
   if (payload === null) {
     return;
@@ -264,7 +271,5 @@ export async function loadBrainForAutoplay(onLoaded) {
     payload.bestDistance ?? 0
   );
   syncGenomeCounters([payload.bestBirdBrain]);
-  if (onLoaded) {
-    onLoaded();
-  }
+  onLoaded?.();
 }

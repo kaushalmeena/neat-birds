@@ -1,4 +1,4 @@
-import { BIRD_COLORS, BIRD_CREATE_LIMIT } from "../constants/bird";
+import { BirdColor, BIRD_CREATE_LIMIT } from "../constants/bird";
 import {
   COMPATIBILITY_THRESHOLD,
   CROSSOVER_RATE,
@@ -6,15 +6,23 @@ import {
   GLOBAL_ELITE_COUNT,
   SURVIVAL_RATE
 } from "../constants/neat";
+import type { Bird } from "../types";
+import type { Genome } from "./neat";
 import { createBird } from "./bird";
 import { createCopy, getRandomItem } from "./helper";
 import { compatibilityDistance, crossoverGenomes, mutateGenome } from "./neat";
 
+interface Species {
+  representative: Genome;
+  members: Bird[];
+  score: number;
+}
+
 // Function to group birds into species by genome compatibility, so new
 // topologies compete within their own niche instead of against the whole
 // population before they've had time to optimize
-function speciate(birds) {
-  const species = [];
+function speciate(birds: Bird[]): Species[] {
+  const species: Species[] = [];
   for (const bird of birds) {
     const home = species.find(
       (s) =>
@@ -24,16 +32,16 @@ function speciate(birds) {
     if (home) {
       home.members.push(bird);
     } else {
-      species.push({ representative: bird.brain, members: [bird] });
+      species.push({ representative: bird.brain, members: [bird], score: 0 });
     }
   }
   return species;
 }
 
 // Function to breed one offspring from a pool of parent birds
-function createChild(parents, color) {
+function createChild(parents: Bird[], color: BirdColor): Bird {
   const partnerA = getRandomItem(parents);
-  let brain;
+  let brain: Genome;
   if (Math.random() < CROSSOVER_RATE) {
     // Crossover requires the fitter parent first
     const partnerB = getRandomItem(parents);
@@ -51,24 +59,27 @@ function createChild(parents, color) {
 
 // Cycle species through the available colors so speciation is
 // visible during training
-const SPECIES_COLORS = Object.values(BIRD_COLORS);
+const SPECIES_COLORS: BirdColor[] = Object.values(BirdColor);
 
-function getSpeciesColor(index) {
+function getSpeciesColor(index: number): BirdColor {
   return SPECIES_COLORS[index % SPECIES_COLORS.length];
 }
 
 // Function to create an initial population of birds
-export function createPopulation() {
-  const birds = [];
+export function createPopulation(): Bird[] {
+  const birds: Bird[] = [];
   for (let i = 0; i < BIRD_CREATE_LIMIT; i += 1) {
-    birds.push(createBird({ color: BIRD_COLORS.RED }));
+    birds.push(createBird({ color: BirdColor.RED }));
   }
   return birds;
 }
 
 // Function to generate the next generation of birds using NEAT:
 // speciation, fitness sharing, elitism, then crossover and mutation
-export function nextGeneration(birds) {
+export function nextGeneration(birds: Bird[]): {
+  birds: Bird[];
+  speciesCount: number;
+} {
   // Fitness rewards longer survival superlinearly
   for (const bird of birds) {
     bird.fitness = bird.distance ** 2;
@@ -86,7 +97,7 @@ export function nextGeneration(birds) {
     totalScore += s.score;
   }
 
-  const newBirds = [];
+  const newBirds: Bird[] = [];
 
   // Global elitism: the overall fittest birds always carry over unchanged,
   // even if their species is too small for per-species elitism. This makes

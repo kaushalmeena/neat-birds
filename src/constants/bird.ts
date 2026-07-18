@@ -15,17 +15,17 @@ export const BIRD_FALL_SPEED = 0.25;
 export const BIRD_FLAP_LIFT = -5;
 export const BIRD_FLAP_TIMEOUT = 80;
 
-export const BIRD_COLORS = {
-  ORANGE: "orange",
-  BLUE: "blue",
-  RED: "red",
-  GREEN: "green",
-  BROWN: "brown",
-  GRAY: "gray",
-  PURPLE: "purple"
-};
+export enum BirdColor {
+  ORANGE = "orange",
+  BLUE = "blue",
+  RED = "red",
+  GREEN = "green",
+  BROWN = "brown",
+  GRAY = "gray",
+  PURPLE = "purple"
+}
 
-export const BIRD_WINGS = {
-  UP: "up",
-  DOWN: "down"
-};
+export enum Wing {
+  UP = "up",
+  DOWN = "down"
+}

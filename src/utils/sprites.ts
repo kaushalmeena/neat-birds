@@ -1,5 +1,6 @@
-import { BIRD_COLORS, BIRD_WINGS } from "../constants/bird";
+import { BirdColor, Wing } from "../constants/bird";
 import { PIPE_COLOR_COUNT } from "../constants/pipe";
+import type { Sprite } from "../types";
 import background1 from "../assets/sprites/Background1.png";
 import background2 from "../assets/sprites/Background2.png";
 import background3 from "../assets/sprites/Background3.png";
@@ -13,7 +14,7 @@ import spritesheet from "../assets/sprites/Spritesheet.png";
 const spritesheetImage = new Image();
 spritesheetImage.src = spritesheet;
 
-function createImage(src) {
+function createImage(src: string): HTMLImageElement {
   const image = new Image();
   image.src = src;
   return image;
@@ -21,7 +22,7 @@ function createImage(src) {
 
 // Scrolling backdrops (256x256): green/orange/brown canyons,
 // then sunset, day and dusk cities
-export const backgroundImages = [
+export const backgroundImages: HTMLImageElement[] = [
   background1,
   background2,
   background3,
@@ -30,7 +31,7 @@ export const backgroundImages = [
   background6
 ].map(createImage);
 
-export const groundSprite = {
+export const groundSprite: Sprite = {
   image: spritesheetImage,
   sx: 96,
   sy: 288,
@@ -40,7 +41,7 @@ export const groundSprite = {
 
 // One 32x272 pipe per color, in LOWER orientation (cap at top);
 // UPPER pipes are drawn rotated 180 degrees
-export const pipeSprites = Array.from(
+export const pipeSprites: Sprite[] = Array.from(
   { length: PIPE_COLOR_COUNT },
   (_, index) => ({
     image: spritesheetImage,
@@ -53,14 +54,14 @@ export const pipeSprites = Array.from(
 
 // Bird frames are laid out 4 colors per 16px row, wings-UP then
 // wings-DOWN per color, starting at y=272
-const BIRD_COLOR_ORDER = [
-  BIRD_COLORS.ORANGE,
-  BIRD_COLORS.BLUE,
-  BIRD_COLORS.RED,
-  BIRD_COLORS.GREEN,
-  BIRD_COLORS.BROWN,
-  BIRD_COLORS.GRAY,
-  BIRD_COLORS.PURPLE
+const BIRD_COLOR_ORDER: BirdColor[] = [
+  BirdColor.ORANGE,
+  BirdColor.BLUE,
+  BirdColor.RED,
+  BirdColor.GREEN,
+  BirdColor.BROWN,
+  BirdColor.GRAY,
+  BirdColor.PURPLE
 ];
 
 export const birdSprites = Object.fromEntries(
@@ -70,14 +71,14 @@ export const birdSprites = Object.fromEntries(
     return [
       color,
       {
-        [BIRD_WINGS.UP]: {
+        [Wing.UP]: {
           image: spritesheetImage,
           sx,
           sy,
           sWidth: 16,
           sHeight: 16
         },
-        [BIRD_WINGS.DOWN]: {
+        [Wing.DOWN]: {
           image: spritesheetImage,
           sx: sx + 16,
           sy,
@@ -87,4 +88,4 @@ export const birdSprites = Object.fromEntries(
       }
     ];
   })
-);
+) as Record<BirdColor, Record<Wing, Sprite>>;

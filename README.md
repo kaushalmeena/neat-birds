@@ -2,7 +2,7 @@
 
 A Flappy Bird–style game that learns to play itself using the **NEAT**
 (NeuroEvolution of Augmenting Topologies) algorithm — implemented from scratch
-in vanilla JavaScript, with no machine-learning libraries.
+in TypeScript, with no machine-learning libraries.
 
 **▶ Play it live:** [kaushalmeena.github.io/neat-birds](https://kaushalmeena.github.io/neat-birds/)
 
@@ -11,7 +11,7 @@ in vanilla JavaScript, with no machine-learning libraries.
 - **Three modes** — play it yourself, watch a population evolve, or replay a
   trained brain.
 - **From-scratch NEAT** — genomes, speciation, fitness sharing, elitism, and
-  structural mutation, all hand-written (see [`src/utils/neat.js`](src/utils/neat.js)).
+  structural mutation, all hand-written (see [`src/utils/neat.ts`](src/utils/neat.ts)).
 - **Training dashboard** — live best-distance, generation, population, and
   species counts, plus a best-distance-per-generation chart.
 - **Speed multiplier** — fast-forward evolution at 1×/2×/4×/8× since rendering,
@@ -23,18 +23,18 @@ in vanilla JavaScript, with no machine-learning libraries.
 
 ## Modes
 
-| Mode | What happens |
-| --- | --- |
-| **Standard** | You control a single bird. The pipes speed up as your score climbs. |
+| Mode         | What happens                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Standard** | You control a single bird. The pipes speed up as your score climbs.                                                   |
 | **Training** | A population of 500 birds evolves generation after generation, unsupervised. Save the best brain from the pause menu. |
-| **Autoplay** | Upload a previously saved brain file and watch it play on its own. |
+| **Autoplay** | Upload a previously saved brain file and watch it play on its own.                                                    |
 
 ## Controls
 
-| Action | Keyboard | Mouse / Touch |
-| --- | --- | --- |
-| Flap (standard mode) | `Space` | Click / tap |
-| Pause / resume | `Esc` | Tap **PAUSE** |
+| Action               | Keyboard  | Mouse / Touch |
+| -------------------- | --------- | ------------- |
+| Flap (standard mode) | `Space`   | Click / tap   |
+| Pause / resume       | `Esc`     | Tap **PAUSE** |
 | Cycle training speed | `↑` / `↓` | Tap **SPEED** |
 
 Menus (mode select, start, pause, save/load, restart, quit) are all clickable
@@ -94,13 +94,16 @@ The app will be available at
 
 ## Available Scripts
 
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Start the Vite dev server with hot reload. |
-| `npm run build` | Build the production bundle into `dist/`. |
-| `npm run preview` | Preview the production build locally. |
-| `npm run lint` | Lint the source with ESLint. |
-| `npm run lint:fix` | Lint and auto-fix where possible. |
+| Script                 | Description                                    |
+| ---------------------- | ---------------------------------------------- |
+| `npm run dev`          | Start the Vite dev server with hot reload.     |
+| `npm run build`        | Type-check, then build the production `dist/`. |
+| `npm run preview`      | Preview the production build locally.          |
+| `npm run typecheck`    | Type-check the source with `tsc` (no emit).    |
+| `npm run lint`         | Lint the source with ESLint.                   |
+| `npm run lint:fix`     | Lint and auto-fix where possible.              |
+| `npm run format`       | Format the source with Prettier.               |
+| `npm run format:check` | Check formatting without writing changes.      |
 
 ## Project Structure
 
@@ -111,12 +114,14 @@ src/
   state/       Central game state and brain save/load
   utils/       Entities (bird, pipe), the NEAT engine (neat, ga),
                rendering, input, and audio
-  main.js      Entry point: game loop and input handling
+  types.ts     Shared domain types (Bird, Pipe, GameState, ...)
+  main.ts      Entry point: game loop and input handling
 ```
 
 ## Tech Stack
 
-- Vanilla JavaScript (ES modules) — no game or ML frameworks
+- [TypeScript](https://www.typescriptlang.org/) (ES modules) — no game or ML
+  frameworks
 - HTML5 Canvas for rendering
 - Web Audio API for sound
 - [Vite](https://vitejs.dev/) for bundling and dev server

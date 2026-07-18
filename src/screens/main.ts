@@ -4,8 +4,8 @@ import {
   CANVAS_WIDTH,
   EXIT_X_POS,
   GROUND_HEIGHT,
-  MODES,
-  SCREENS
+  Mode,
+  Screen
 } from "../constants/app";
 import { BIRD_CREATE_LIMIT } from "../constants/bird";
 import {
@@ -37,8 +37,8 @@ const BACKGROUND_TILE_SIZE = CANVAS_HEIGHT;
 
 // Difficulty ramps up with score in standard mode; training keeps a fixed
 // speed so every generation is scored against the same environment
-function getPipeSpeed() {
-  if (state.current.mode !== MODES.STANDARD) {
+function getPipeSpeed(): number {
+  if (state.current.mode !== Mode.STANDARD) {
     return PIPE_SPEED;
   }
   return Math.min(
@@ -50,7 +50,7 @@ function getPipeSpeed() {
 // --- Simulation (no drawing) ---------------------------------------------
 
 // Advances every active pipe, spawns new ones, and counts passed pipes
-function updatePipes(speed) {
+function updatePipes(speed: number): void {
   let activeCount = 0;
   let farthestPosX = 0;
   for (let i = 0; i < state.current.pipes.length; i += 1) {
@@ -64,7 +64,7 @@ function updatePipes(speed) {
         pipe.active = false;
         state.current.score += 1;
         // Chime in standard and autoplay mode; training would be a noise wall
-        if (state.current.mode !== MODES.TRAINING) {
+        if (state.current.mode !== Mode.TRAINING) {
           playScoreSound();
         }
       }
@@ -80,10 +80,10 @@ function updatePipes(speed) {
   }
 }
 
-function updatePlayerBird() {
+function updatePlayerBird(): void {
   updateBird(state.current.playerBird);
   if (isBirdDead(state.current.playerBird, state.current.pipes)) {
-    state.current.activeScreen = SCREENS.DEATH;
+    state.current.activeScreen = Screen.DEATH;
     playDeathSound();
     if (state.current.score > state.current.bestScore) {
       setBestScore(state.current.score);
@@ -91,18 +91,18 @@ function updatePlayerBird() {
   }
 }
 
-function updateAutoplayBird() {
+function updateAutoplayBird(): void {
   const bird = state.current.playerBird;
   updateBird(bird);
   think(bird, state.current.pipes);
   // Autoplay runs don't count towards the player's best score
   if (isBirdDead(bird, state.current.pipes)) {
-    state.current.activeScreen = SCREENS.DEATH;
+    state.current.activeScreen = Screen.DEATH;
     playDeathSound();
   }
 }
 
-function breedNextGeneration() {
+function breedNextGeneration(): void {
   const generationBest = Math.max(
     ...state.current.deadBirds.map((bird) => bird.distance)
   );
@@ -132,7 +132,7 @@ function breedNextGeneration() {
   resetState();
 }
 
-function updateLiveBirds() {
+function updateLiveBirds(): void {
   // Iterate backwards so removing a dead bird doesn't skip the next one
   for (let i = state.current.liveBirds.length - 1; i >= 0; i -= 1) {
     const bird = state.current.liveBirds[i];
@@ -149,11 +149,11 @@ function updateLiveBirds() {
 }
 
 // Runs one simulation tick for the active mode
-function simulate(speed) {
+function simulate(speed: number): void {
   updatePipes(speed);
-  if (state.current.mode === MODES.STANDARD) {
+  if (state.current.mode === Mode.STANDARD) {
     updatePlayerBird();
-  } else if (state.current.mode === MODES.AUTOPLAY) {
+  } else if (state.current.mode === Mode.AUTOPLAY) {
     updateAutoplayBird();
   } else {
     updateLiveBirds();
@@ -162,7 +162,7 @@ function simulate(speed) {
 
 // --- Drawing --------------------------------------------------------------
 
-function drawBackground(advance) {
+function drawBackground(advance: number): void {
   const backgroundImage =
     backgroundImages[state.current.backgroundIndex % backgroundImages.length];
   // Repeat the backdrop, scrolling at quarter speed for parallax depth
@@ -181,7 +181,7 @@ function drawBackground(advance) {
   context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 }
 
-function drawActivePipes() {
+function drawActivePipes(): void {
   for (let i = 0; i < state.current.pipes.length; i += 1) {
     if (state.current.pipes[i].active) {
       drawPipe(state.current.pipes[i]);
@@ -189,7 +189,7 @@ function drawActivePipes() {
   }
 }
 
-function drawGround(advance) {
+function drawGround(advance: number): void {
   const groundY = CANVAS_HEIGHT - GROUND_HEIGHT;
   // Repeat the ground block tile across the bottom, scrolled with the
   // pipes so the ground appears to move
@@ -209,30 +209,30 @@ function drawGround(advance) {
   }
 }
 
-function drawLiveBirds() {
+function drawLiveBirds(): void {
   for (let i = 0; i < state.current.liveBirds.length; i += 1) {
     drawBird(state.current.liveBirds[i]);
   }
 }
 
-function drawPauseButton() {
+function drawPauseButton(): void {
   drawText("PAUSE", 420, 10, { color: "#f7dc6f" });
 }
 
-function drawScoreText() {
+function drawScoreText(): void {
   drawText(`SCORE:${state.current.score}`, 10, 10);
 }
 
-// Clickable speed toggle shown at the top-left during training
-function drawSpeedButton() {
-  drawText(`SPEED:${state.current.trainingSpeed}x`, 10, 30, {
+// Clickable speed toggle shown just below the training panel / fitness chart
+function drawSpeedButton(): void {
+  drawText(`SPEED:${state.current.trainingSpeed}x`, 320, 162, {
     color: "#f7dc6f"
   });
 }
 
 // HUD panel in the top-right corner below the pause button, holding the
 // training stats with the best-distance-per-generation chart underneath
-function drawTrainingPanel() {
+function drawTrainingPanel(): void {
   const panelWidth = 170;
   const panelHeight = 120;
   const panelX = CANVAS_WIDTH - panelWidth - 10;
@@ -241,7 +241,7 @@ function drawTrainingPanel() {
   context.fillRect(panelX, panelY, panelWidth, panelHeight);
   // Stats, with labels padded to equal width so the values line up
   // in the pixel font
-  const lines = [
+  const lines: [string, string | number][] = [
     ["BEST-DIST", state.current.bestDistance],
     ["GENERATION", state.current.generation],
     ["ALIVE", `${state.current.liveBirds.length}/${BIRD_CREATE_LIMIT}`],
@@ -291,16 +291,16 @@ function drawTrainingPanel() {
   context.stroke();
 }
 
-function drawMainScreen() {
+function drawMainScreen(): void {
   const speed = getPipeSpeed();
   // Training fast-forwards by running several simulation ticks per frame;
   // other modes always run exactly one tick
   const steps =
-    state.current.mode === MODES.TRAINING ? state.current.trainingSpeed : 1;
+    state.current.mode === Mode.TRAINING ? state.current.trainingSpeed : 1;
   for (let step = 0; step < steps; step += 1) {
     simulate(speed);
     // A tick may end the run (death screen) - stop simulating further
-    if (state.current.activeScreen !== SCREENS.MAIN) {
+    if (state.current.activeScreen !== Screen.MAIN) {
       break;
     }
   }
@@ -312,14 +312,12 @@ function drawMainScreen() {
   drawGround(advance);
   drawScoreText();
   drawPauseButton();
-  if (state.current.mode === MODES.STANDARD) {
-    drawBird(state.current.playerBird);
-  } else if (state.current.mode === MODES.AUTOPLAY) {
-    drawBird(state.current.playerBird);
-  } else {
+  if (state.current.mode === Mode.TRAINING) {
     drawLiveBirds();
     drawTrainingPanel();
     drawSpeedButton();
+  } else {
+    drawBird(state.current.playerBird);
   }
 }
 

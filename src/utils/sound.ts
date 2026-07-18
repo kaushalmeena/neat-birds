@@ -1,9 +1,9 @@
 // Chiptune-style sound effects synthesized with WebAudio - no audio assets.
 // The AudioContext is created lazily on the first sound, which happens in
 // response to a user gesture (click/key), satisfying autoplay policies.
-let audioContext;
+let audioContext: AudioContext | undefined;
 
-function getAudioContext() {
+function getAudioContext(): AudioContext {
   if (!audioContext) {
     audioContext = new AudioContext();
   }
@@ -13,8 +13,20 @@ function getAudioContext() {
   return audioContext;
 }
 
+interface ToneOptions {
+  frequency: number;
+  endFrequency?: number;
+  duration: number;
+  delay?: number;
+}
+
 // Plays a single square-wave tone with a quick fade-out envelope
-function playTone({ frequency, endFrequency, duration, delay = 0 }) {
+function playTone({
+  frequency,
+  endFrequency,
+  duration,
+  delay = 0
+}: ToneOptions): void {
   const ctx = getAudioContext();
   const oscillator = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -36,17 +48,17 @@ function playTone({ frequency, endFrequency, duration, delay = 0 }) {
 }
 
 // Short rising blip when the player flaps
-export function playFlapSound() {
+export function playFlapSound(): void {
   playTone({ frequency: 320, endFrequency: 520, duration: 0.08 });
 }
 
 // Two-tone coin-like chime when a pipe is passed
-export function playScoreSound() {
+export function playScoreSound(): void {
   playTone({ frequency: 660, duration: 0.07 });
   playTone({ frequency: 990, duration: 0.1, delay: 0.07 });
 }
 
 // Falling sweep when the player dies
-export function playDeathSound() {
+export function playDeathSound(): void {
   playTone({ frequency: 400, endFrequency: 90, duration: 0.45 });
 }

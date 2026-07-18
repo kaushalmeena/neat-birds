@@ -1,10 +1,10 @@
 import {
-  ACTIONS,
+  Action,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   FRAME_DELAY,
-  MODES,
-  SCREENS
+  Mode,
+  Screen
 } from "./constants/app";
 import drawDeathScreen from "./screens/death";
 import drawMainScreen from "./screens/main";
@@ -18,7 +18,7 @@ import { getPauseMenuItems } from "./utils/menu";
 
 import "./style.css";
 
-function setup() {
+function setup(): void {
   // Set canvas height and width;
   canvas.height = CANVAS_HEIGHT;
   canvas.width = CANVAS_WIDTH;
@@ -28,57 +28,57 @@ function setup() {
   // Attach keyboard listener for spacebar key
   document.body.onkeyup = (e) => {
     switch (state.current.activeScreen) {
-      case SCREENS.MAIN:
+      case Screen.MAIN:
         if (e.code === "Space") {
-          performAction(ACTIONS.FLAP_WING);
+          performAction(Action.FLAP_WING);
         } else if (e.code === "Escape") {
-          performAction(ACTIONS.PAUSE_GAME);
+          performAction(Action.PAUSE_GAME);
         } else if (e.code === "ArrowUp" || e.code === "ArrowDown") {
-          performAction(ACTIONS.CYCLE_SPEED);
+          performAction(Action.CYCLE_SPEED);
         }
         break;
       default:
     }
   };
   // Handle a tap/click at canvas coordinates, per screen
-  const handleTap = (x, y) => {
+  const handleTap = (x: number, y: number) => {
     switch (state.current.activeScreen) {
-      case SCREENS.TITLE:
+      case Screen.TITLE:
         // When 'MODE' is clicked (three mode lines)
         if (isPointInside(x, y, 132, 230, 224, 56)) {
-          performAction(ACTIONS.TOGGLE_MODE);
+          performAction(Action.TOGGLE_MODE);
         }
         // When 'START' is clicked
         else if (isPointInside(x, y, 190, 300, 120, 24)) {
-          performAction(ACTIONS.START_GAME);
+          performAction(Action.START_GAME);
         }
         break;
-      case SCREENS.MAIN:
+      case Screen.MAIN:
         // When 'PAUSE' is clicked
         if (isPointInside(x, y, 420, 10, 80, 14)) {
-          performAction(ACTIONS.PAUSE_GAME);
+          performAction(Action.PAUSE_GAME);
         }
         // When the training 'SPEED' toggle is clicked
         else if (
-          state.current.mode === MODES.TRAINING &&
-          isPointInside(x, y, 8, 28, 130, 18)
+          state.current.mode === Mode.TRAINING &&
+          isPointInside(x, y, 318, 160, 130, 20)
         ) {
-          performAction(ACTIONS.CYCLE_SPEED);
+          performAction(Action.CYCLE_SPEED);
         } else {
-          performAction(ACTIONS.FLAP_WING);
+          performAction(Action.FLAP_WING);
         }
         break;
-      case SCREENS.DEATH:
+      case Screen.DEATH:
         // When 'RESTART' is clicked
         if (isPointInside(x, y, 166, 250, 168, 24)) {
-          performAction(ACTIONS.RESTART_GAME);
+          performAction(Action.RESTART_GAME);
         }
         // When 'QUIT' is clicked
         else if (isPointInside(x, y, 202, 290, 96, 24)) {
-          performAction(ACTIONS.QUIT_GAME);
+          performAction(Action.QUIT_GAME);
         }
         break;
-      case SCREENS.PAUSE: {
+      case Screen.PAUSE: {
         // Menu items vary by mode, so hit-test the same list the screen draws
         const item = getPauseMenuItems(state.current.mode).find((menuItem) =>
           isPointInside(
@@ -118,32 +118,32 @@ function setup() {
   };
 }
 
-function draw() {
+function draw(): void {
   switch (state.current.activeScreen) {
-    case SCREENS.TITLE:
+    case Screen.TITLE:
       drawTitleScreen();
       break;
-    case SCREENS.MAIN:
+    case Screen.MAIN:
       drawMainScreen();
       break;
-    case SCREENS.PAUSE:
+    case Screen.PAUSE:
       drawPauseScreen();
       break;
-    case SCREENS.DEATH:
+    case Screen.DEATH:
       drawDeathScreen();
       break;
     default:
   }
 }
 
-function animate() {
+function animate(): void {
   setTimeout(() => {
     requestAnimationFrame(animate);
     draw();
   }, FRAME_DELAY);
 }
 
-function start() {
+function start(): void {
   // Wait for font to load
   document.fonts
     .load("44px PressStart2P")
@@ -155,7 +155,7 @@ function start() {
       alert("Couldn't load font!");
     })
     .finally(() => {
-      document.querySelector(".loader-container").remove();
+      document.querySelector(".loader-container")?.remove();
     });
 }
 
