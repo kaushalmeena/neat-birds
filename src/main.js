@@ -3,6 +3,7 @@ import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   FRAME_DELAY,
+  MODES,
   SCREENS
 } from "./constants/app";
 import drawDeathScreen from "./screens/death";
@@ -31,6 +32,8 @@ function setup() {
           performAction(ACTIONS.FLAP_WING);
         } else if (e.code === "Escape") {
           performAction(ACTIONS.PAUSE_GAME);
+        } else if (e.code === "ArrowUp" || e.code === "ArrowDown") {
+          performAction(ACTIONS.CYCLE_SPEED);
         }
         break;
       default:
@@ -53,6 +56,13 @@ function setup() {
         // When 'PAUSE' is clicked
         if (isPointInside(x, y, 420, 10, 80, 14)) {
           performAction(ACTIONS.PAUSE_GAME);
+        }
+        // When the training 'SPEED' toggle is clicked
+        else if (
+          state.current.mode === MODES.TRAINING &&
+          isPointInside(x, y, 8, 28, 130, 18)
+        ) {
+          performAction(ACTIONS.CYCLE_SPEED);
         } else {
           performAction(ACTIONS.FLAP_WING);
         }

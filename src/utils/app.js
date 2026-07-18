@@ -1,4 +1,4 @@
-import { ACTIONS, MODES, SCREENS } from "../constants/app";
+import { ACTIONS, MODES, SCREENS, TRAINING_SPEEDS } from "../constants/app";
 import { BIRD_COLORS } from "../constants/bird";
 import {
   loadBrainFromFile,
@@ -85,6 +85,14 @@ export function performAction(action) {
         playFlapSound();
       }
       break;
+    case ACTIONS.CYCLE_SPEED: {
+      // Step to the next speed multiplier, wrapping back to the slowest
+      const next =
+        (TRAINING_SPEEDS.indexOf(state.current.trainingSpeed) + 1) %
+        TRAINING_SPEEDS.length;
+      state.current.trainingSpeed = TRAINING_SPEEDS[next];
+      break;
+    }
     default:
   }
 }

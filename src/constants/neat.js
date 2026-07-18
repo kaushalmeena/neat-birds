@@ -29,3 +29,6 @@ export const WEIGHT_COEFFICIENT = 0.4;
 export const SURVIVAL_RATE = 0.5;
 // Species at least this big carry their champion over unchanged
 export const ELITE_SPECIES_SIZE = 5;
+// The overall fittest birds always survive unchanged, regardless of
+// their species size, so the champion is never lost to unlucky breeding
+export const GLOBAL_ELITE_COUNT = 1;

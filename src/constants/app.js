@@ -35,5 +35,10 @@ export const ACTIONS = {
   LOAD_BRAIN: "load_brain",
   SAVE_BRAIN: "save_brain",
   TOGGLE_MODE: "toggle_mode",
-  FLAP_WING: "flap_wing"
+  FLAP_WING: "flap_wing",
+  CYCLE_SPEED: "cycle_speed"
 };
+
+// Simulation steps per rendered frame, cycled by the training speed button.
+// Higher values fast-forward evolution since rendering is the bottleneck.
+export const TRAINING_SPEEDS = [1, 2, 4, 8];

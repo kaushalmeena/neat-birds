@@ -27,6 +27,8 @@ export const state = {
     // Best distance per generation, for the training fitness chart
     distanceHistory: [],
     speciesCount: 1,
+    // Simulation steps per frame in training mode (fast-forward)
+    trainingSpeed: 1,
     mode: MODES.STANDARD,
     activeScreen: SCREENS.TITLE,
     // Which backdrop is in use; re-rolled when a game starts

@@ -3,6 +3,7 @@ import {
   COMPATIBILITY_THRESHOLD,
   CROSSOVER_RATE,
   ELITE_SPECIES_SIZE,
+  GLOBAL_ELITE_COUNT,
   SURVIVAL_RATE
 } from "../constants/neat";
 import { createBird } from "./bird";
@@ -86,6 +87,17 @@ export function nextGeneration(birds) {
   }
 
   const newBirds = [];
+
+  // Global elitism: the overall fittest birds always carry over unchanged,
+  // even if their species is too small for per-species elitism. This makes
+  // the recorded best distance monotonic - the champion can never be lost.
+  const ranked = [...birds].sort((a, b) => b.fitness - a.fitness);
+  for (let i = 0; i < GLOBAL_ELITE_COUNT && i < ranked.length; i += 1) {
+    newBirds.push(
+      createBird({ brain: ranked[i].brain, color: ranked[i].color })
+    );
+  }
+
   species.forEach((s, index) => {
     const color = getSpeciesColor(index);
     // Offspring quota proportional to the species' share of total score;

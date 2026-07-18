@@ -47,11 +47,126 @@ function getPipeSpeed() {
   );
 }
 
-function drawBackground(speed) {
+// --- Simulation (no drawing) ---------------------------------------------
+
+// Advances every active pipe, spawns new ones, and counts passed pipes
+function updatePipes(speed) {
+  let activeCount = 0;
+  let farthestPosX = 0;
+  for (let i = 0; i < state.current.pipes.length; i += 1) {
+    const pipe = state.current.pipes[i];
+    if (pipe.active) {
+      activeCount += 1;
+      farthestPosX = Math.max(farthestPosX, pipe.x);
+      updatePipe(pipe, speed);
+      // Mark pipe inactive once it has scrolled off screen and count it passed
+      if (pipe.x < EXIT_X_POS) {
+        pipe.active = false;
+        state.current.score += 1;
+        // Chime in standard and autoplay mode; training would be a noise wall
+        if (state.current.mode !== MODES.TRAINING) {
+          playScoreSound();
+        }
+      }
+    }
+  }
+  if (activeCount < PIPE_ACTIVE_LIMIT) {
+    const pipeIndex = state.current.pipes.findIndex((pipe) => !pipe.active);
+    if (pipeIndex > -1) {
+      const newPosX =
+        farthestPosX + getRandomInteger(PIPE_MIN_DISTANCE, PIPE_MAX_DISTANCE);
+      makePipeActive(state.current.pipes[pipeIndex], newPosX);
+    }
+  }
+}
+
+function updatePlayerBird() {
+  updateBird(state.current.playerBird);
+  if (isBirdDead(state.current.playerBird, state.current.pipes)) {
+    state.current.activeScreen = SCREENS.DEATH;
+    playDeathSound();
+    if (state.current.score > state.current.bestScore) {
+      setBestScore(state.current.score);
+    }
+  }
+}
+
+function updateAutoplayBird() {
+  const bird = state.current.playerBird;
+  updateBird(bird);
+  think(bird, state.current.pipes);
+  // Autoplay runs don't count towards the player's best score
+  if (isBirdDead(bird, state.current.pipes)) {
+    state.current.activeScreen = SCREENS.DEATH;
+    playDeathSound();
+  }
+}
+
+function breedNextGeneration() {
+  const generationBest = Math.max(
+    ...state.current.deadBirds.map((bird) => bird.distance)
+  );
+  state.current.generation += 1;
+  // Keep a copy of the champion brain (and its color) whenever the record
+  // improves, so it can be exported and played back in autoplay mode
+  if (generationBest > state.current.bestDistance) {
+    const champion = state.current.deadBirds.reduce((a, b) =>
+      b.distance > a.distance ? b : a
+    );
+    state.current.bestBrain = createCopy(champion.brain);
+    state.current.bestBrainColor = champion.color;
+  }
+  state.current.bestDistance = Math.max(
+    generationBest,
+    state.current.bestDistance
+  );
+  // Record this generation's best distance for the fitness chart
+  state.current.distanceHistory.push(generationBest);
+  if (state.current.distanceHistory.length > CHART_MAX_POINTS) {
+    state.current.distanceHistory.shift();
+  }
+  const { birds, speciesCount } = nextGeneration(state.current.deadBirds);
+  state.current.liveBirds = birds;
+  state.current.speciesCount = speciesCount;
+  state.current.deadBirds = [];
+  resetState();
+}
+
+function updateLiveBirds() {
+  // Iterate backwards so removing a dead bird doesn't skip the next one
+  for (let i = state.current.liveBirds.length - 1; i >= 0; i -= 1) {
+    const bird = state.current.liveBirds[i];
+    updateBird(bird);
+    think(bird, state.current.pipes);
+    if (isBirdDead(bird, state.current.pipes)) {
+      state.current.deadBirds.push(...state.current.liveBirds.splice(i, 1));
+    }
+  }
+  // When all birds are dead breed the next generation from the dead ones
+  if (state.current.liveBirds.length === 0) {
+    breedNextGeneration();
+  }
+}
+
+// Runs one simulation tick for the active mode
+function simulate(speed) {
+  updatePipes(speed);
+  if (state.current.mode === MODES.STANDARD) {
+    updatePlayerBird();
+  } else if (state.current.mode === MODES.AUTOPLAY) {
+    updateAutoplayBird();
+  } else {
+    updateLiveBirds();
+  }
+}
+
+// --- Drawing --------------------------------------------------------------
+
+function drawBackground(advance) {
   const backgroundImage =
     backgroundImages[state.current.backgroundIndex % backgroundImages.length];
   // Repeat the backdrop, scrolling at quarter speed for parallax depth
-  backgroundOffset = (backgroundOffset + speed * 0.25) % BACKGROUND_TILE_SIZE;
+  backgroundOffset = (backgroundOffset + advance * 0.25) % BACKGROUND_TILE_SIZE;
   for (let x = -backgroundOffset; x < CANVAS_WIDTH; x += BACKGROUND_TILE_SIZE) {
     context.drawImage(
       backgroundImage,
@@ -66,45 +181,19 @@ function drawBackground(speed) {
   context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 }
 
-function drawPipes(speed) {
-  let activeCount = 0;
-  let farthestPosX = 0;
+function drawActivePipes() {
   for (let i = 0; i < state.current.pipes.length; i += 1) {
-    const pipe = state.current.pipes[i];
-    // Only active pipes are drawn and moved
-    if (pipe.active) {
-      activeCount += 1;
-      // Track the farthest pipe so a new one can spawn behind it
-      farthestPosX = Math.max(farthestPosX, pipe.x);
-      drawPipe(pipe);
-      updatePipe(pipe, speed);
-      // Mark pipe inactive once it has scrolled off screen and count it as passed
-      if (pipe.x < EXIT_X_POS) {
-        pipe.active = false;
-        state.current.score += 1;
-        // Chime in standard and AI mode; training would be a wall of noise
-        if (state.current.mode !== MODES.TRAINING) {
-          playScoreSound();
-        }
-      }
-    }
-  }
-  if (activeCount < PIPE_ACTIVE_LIMIT) {
-    // Check if any inactive pipe available
-    const pipeIndex = state.current.pipes.findIndex((pipe) => !pipe.active);
-    if (pipeIndex > -1) {
-      const newPosX =
-        farthestPosX + getRandomInteger(PIPE_MIN_DISTANCE, PIPE_MAX_DISTANCE);
-      makePipeActive(state.current.pipes[pipeIndex], newPosX);
+    if (state.current.pipes[i].active) {
+      drawPipe(state.current.pipes[i]);
     }
   }
 }
 
-function drawGround(speed) {
+function drawGround(advance) {
   const groundY = CANVAS_HEIGHT - GROUND_HEIGHT;
   // Repeat the ground block tile across the bottom, scrolled with the
   // pipes so the ground appears to move
-  groundOffset = (groundOffset + speed) % GROUND_HEIGHT;
+  groundOffset = (groundOffset + advance) % GROUND_HEIGHT;
   for (let x = -groundOffset; x < CANVAS_WIDTH; x += GROUND_HEIGHT) {
     context.drawImage(
       groundSprite.image,
@@ -120,77 +209,9 @@ function drawGround(speed) {
   }
 }
 
-function drawPlayerBird() {
-  drawBird(state.current.playerBird);
-  updateBird(state.current.playerBird);
-  // If player bird has died then navigate to death screen
-  if (isBirdDead(state.current.playerBird, state.current.pipes)) {
-    state.current.activeScreen = SCREENS.DEATH;
-    playDeathSound();
-    // If high-score is achieved then save the score
-    if (state.current.score > state.current.bestScore) {
-      setBestScore(state.current.score);
-    }
-  }
-}
-
-function drawBirds() {
-  // Iterate backwards so removing a dead bird doesn't skip the next one
-  for (let i = state.current.liveBirds.length - 1; i >= 0; i -= 1) {
-    const bird = state.current.liveBirds[i];
-    drawBird(bird);
-    updateBird(bird);
-    think(bird, state.current.pipes);
-
-    // If bird has died then move it from liveBirds to deadBirds
-    if (isBirdDead(bird, state.current.pipes)) {
-      state.current.deadBirds.push(...state.current.liveBirds.splice(i, 1));
-    }
-  }
-
-  // When all birds are dead breed the next generation from the dead ones
-  if (state.current.liveBirds.length === 0) {
-    const generationBest = Math.max(
-      ...state.current.deadBirds.map((bird) => bird.distance)
-    );
-    state.current.generation += 1;
-    // Keep a copy of the champion brain (and its color) whenever the
-    // record improves, so it can be exported and played back in
-    // autoplay mode
-    if (generationBest > state.current.bestDistance) {
-      const champion = state.current.deadBirds.reduce((a, b) =>
-        b.distance > a.distance ? b : a
-      );
-      state.current.bestBrain = createCopy(champion.brain);
-      state.current.bestBrainColor = champion.color;
-    }
-    state.current.bestDistance = Math.max(
-      generationBest,
-      state.current.bestDistance
-    );
-    // Record this generation's best distance for the fitness chart
-    state.current.distanceHistory.push(generationBest);
-    if (state.current.distanceHistory.length > CHART_MAX_POINTS) {
-      state.current.distanceHistory.shift();
-    }
-    const { birds, speciesCount } = nextGeneration(state.current.deadBirds);
-    state.current.liveBirds = birds;
-    state.current.speciesCount = speciesCount;
-    state.current.deadBirds = [];
-    resetState();
-  }
-}
-
-// The autoplay bird: thinks with the uploaded brain
-function drawAutoplayBird() {
-  const bird = state.current.playerBird;
-  drawBird(bird);
-  updateBird(bird);
-  think(bird, state.current.pipes);
-  // Autoplay runs don't count towards the player's best score
-  if (isBirdDead(bird, state.current.pipes)) {
-    state.current.activeScreen = SCREENS.DEATH;
-    playDeathSound();
+function drawLiveBirds() {
+  for (let i = 0; i < state.current.liveBirds.length; i += 1) {
+    drawBird(state.current.liveBirds[i]);
   }
 }
 
@@ -200,6 +221,13 @@ function drawPauseButton() {
 
 function drawScoreText() {
   drawText(`SCORE:${state.current.score}`, 10, 10);
+}
+
+// Clickable speed toggle shown at the top-left during training
+function drawSpeedButton() {
+  drawText(`SPEED:${state.current.trainingSpeed}x`, 10, 30, {
+    color: "#f7dc6f"
+  });
 }
 
 // HUD panel in the top-right corner below the pause button, holding the
@@ -265,18 +293,33 @@ function drawTrainingPanel() {
 
 function drawMainScreen() {
   const speed = getPipeSpeed();
-  drawBackground(speed);
-  drawPipes(speed);
-  drawGround(speed);
+  // Training fast-forwards by running several simulation ticks per frame;
+  // other modes always run exactly one tick
+  const steps =
+    state.current.mode === MODES.TRAINING ? state.current.trainingSpeed : 1;
+  for (let step = 0; step < steps; step += 1) {
+    simulate(speed);
+    // A tick may end the run (death screen) - stop simulating further
+    if (state.current.activeScreen !== SCREENS.MAIN) {
+      break;
+    }
+  }
+
+  // Ground and backdrop scroll to match the total distance travelled
+  const advance = speed * steps;
+  drawBackground(advance);
+  drawActivePipes();
+  drawGround(advance);
   drawScoreText();
   drawPauseButton();
   if (state.current.mode === MODES.STANDARD) {
-    drawPlayerBird();
+    drawBird(state.current.playerBird);
   } else if (state.current.mode === MODES.AUTOPLAY) {
-    drawAutoplayBird();
+    drawBird(state.current.playerBird);
   } else {
+    drawLiveBirds();
     drawTrainingPanel();
-    drawBirds();
+    drawSpeedButton();
   }
 }
 
