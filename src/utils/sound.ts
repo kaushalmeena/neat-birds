@@ -1,16 +1,16 @@
 // Chiptune-style sound effects synthesized with WebAudio - no audio assets.
 // The AudioContext is created lazily on the first sound, which happens in
 // response to a user gesture (click/key), satisfying autoplay policies.
-let audioContext: AudioContext | undefined;
+const audio: { context?: AudioContext } = {};
 
 function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new AudioContext();
+  if (!audio.context) {
+    audio.context = new AudioContext();
   }
-  if (audioContext.state === "suspended") {
-    audioContext.resume();
+  if (audio.context.state === "suspended") {
+    audio.context.resume();
   }
-  return audioContext;
+  return audio.context;
 }
 
 interface ToneOptions {

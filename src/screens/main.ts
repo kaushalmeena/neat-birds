@@ -29,8 +29,10 @@ import { backgroundImages, groundSprite } from "../utils/sprites";
 const CHART_MAX_POINTS = 60;
 
 // Scroll offsets for the ground and background patterns (purely visual)
-let groundOffset = 0;
-let backgroundOffset = 0;
+const scrollOffsets = {
+  ground: 0,
+  background: 0
+};
 
 // The square background image is scaled to the canvas height
 const BACKGROUND_TILE_SIZE = CANVAS_HEIGHT;
@@ -166,8 +168,13 @@ function drawBackground(advance: number): void {
   const backgroundImage =
     backgroundImages[state.current.backgroundIndex % backgroundImages.length];
   // Repeat the backdrop, scrolling at quarter speed for parallax depth
-  backgroundOffset = (backgroundOffset + advance * 0.25) % BACKGROUND_TILE_SIZE;
-  for (let x = -backgroundOffset; x < CANVAS_WIDTH; x += BACKGROUND_TILE_SIZE) {
+  scrollOffsets.background =
+    (scrollOffsets.background + advance * 0.25) % BACKGROUND_TILE_SIZE;
+  for (
+    let x = -scrollOffsets.background;
+    x < CANVAS_WIDTH;
+    x += BACKGROUND_TILE_SIZE
+  ) {
     context.drawImage(
       backgroundImage,
       x,
@@ -193,8 +200,8 @@ function drawGround(advance: number): void {
   const groundY = CANVAS_HEIGHT - GROUND_HEIGHT;
   // Repeat the ground block tile across the bottom, scrolled with the
   // pipes so the ground appears to move
-  groundOffset = (groundOffset + advance) % GROUND_HEIGHT;
-  for (let x = -groundOffset; x < CANVAS_WIDTH; x += GROUND_HEIGHT) {
+  scrollOffsets.ground = (scrollOffsets.ground + advance) % GROUND_HEIGHT;
+  for (let x = -scrollOffsets.ground; x < CANVAS_WIDTH; x += GROUND_HEIGHT) {
     context.drawImage(
       groundSprite.image,
       groundSprite.sx,
