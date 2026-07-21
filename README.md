@@ -15,15 +15,15 @@ TypeScript, with zero game or machine-learning libraries.
 <table>
   <tr>
     <td align="center">
-      <img src="docs/screenshots/01-title.png" width="270" alt="Title screen with mode select" /><br/>
+      <img src="screenshots/Title.png" width="270" alt="Title screen with mode select" /><br/>
       <sub><b>Pick a mode</b> — play, train, or replay</sub>
     </td>
     <td align="center">
-      <img src="docs/screenshots/02-standard.png" width="270" alt="Standard mode gameplay" /><br/>
+      <img src="screenshots/Standard.png" width="270" alt="Standard mode gameplay" /><br/>
       <sub><b>Standard</b> — you vs. the pipes</sub>
     </td>
     <td align="center">
-      <img src="docs/screenshots/03-training.png" width="270" alt="Training mode with 500 birds and live stats" /><br/>
+      <img src="screenshots/Training.png" width="270" alt="Training mode with 500 birds and live stats" /><br/>
       <sub><b>Training</b> — 500 birds evolving live</sub>
     </td>
   </tr>
