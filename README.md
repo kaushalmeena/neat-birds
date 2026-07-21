@@ -1,10 +1,35 @@
+<div align="center">
+
+<img src="public/favicon.png" alt="NEAT Birds logo" width="96" height="96" />
+
 # NEAT Birds
 
-A Flappy Bird–style game that learns to play itself using the **NEAT**
-(NeuroEvolution of Augmenting Topologies) algorithm — implemented from scratch
-in TypeScript, with no machine-learning libraries.
+**A Flappy Bird that evolves its own brain.** 🧠🐤
 
-**▶ Play it live:** [kaushalmeena.github.io/neat-birds](https://kaushalmeena.github.io/neat-birds/)
+Watch a flock of 500 birds teach _themselves_ to fly through pipes using the
+**NEAT** (NeuroEvolution of Augmenting Topologies) algorithm — hand-written in
+TypeScript, with zero game or machine-learning libraries.
+
+<a href="https://kaushalmeena.github.io/neat-birds/"><img src="https://img.shields.io/badge/%E2%96%B6%20Play-Live%20Demo-4ec0ca?style=for-the-badge&labelColor=272b30" alt="Play the live demo" /></a>
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/01-title.png" width="270" alt="Title screen with mode select" /><br/>
+      <sub><b>Pick a mode</b> — play, train, or replay</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/02-standard.png" width="270" alt="Standard mode gameplay" /><br/>
+      <sub><b>Standard</b> — you vs. the pipes</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/03-training.png" width="270" alt="Training mode with 500 birds and live stats" /><br/>
+      <sub><b>Training</b> — 500 birds evolving live</sub>
+    </td>
+  </tr>
+</table>
+
+</div>
 
 ## Features
 
@@ -92,36 +117,9 @@ npm run dev
 The app will be available at
 [localhost:5173/neat-birds/](http://localhost:5173/neat-birds/).
 
-## Available Scripts
-
-| Script                 | Description                                    |
-| ---------------------- | ---------------------------------------------- |
-| `npm run dev`          | Start the Vite dev server with hot reload.     |
-| `npm run build`        | Type-check, then build the production `dist/`. |
-| `npm run preview`      | Preview the production build locally.          |
-| `npm run typecheck`    | Type-check the source with `tsc` (no emit).    |
-| `npm run lint`         | Lint the source with ESLint.                   |
-| `npm run lint:fix`     | Lint and auto-fix where possible.              |
-| `npm run format`       | Format the source with Prettier.               |
-| `npm run format:check` | Check formatting without writing changes.      |
-
-## Project Structure
-
-```
-src/
-  constants/   Tunable game and NEAT parameters
-  screens/     Per-screen render functions (title, main, pause, death)
-  state/       Central game state and brain save/load
-  utils/       Entities (bird, pipe), the NEAT engine (neat, ga),
-               rendering, input, and audio
-  types.ts     Shared domain types (Bird, Pipe, GameState, ...)
-  main.ts      Entry point: game loop and input handling
-```
-
 ## Tech Stack
 
-- [TypeScript](https://www.typescriptlang.org/) (ES modules) — no game or ML
-  frameworks
+- [TypeScript](https://www.typescriptlang.org/) (ES modules) — no game or ML frameworks
 - HTML5 Canvas for rendering
 - Web Audio API for sound
 - [Vite](https://vitejs.dev/) for bundling and dev server
@@ -129,13 +127,8 @@ src/
 
 ## Credits
 
-- Game art (birds, pipes, tiles, backgrounds) from the
-  [Flappy Bird Assets](https://megacrash.itch.io/flappy-bird-assets) pack by
-  **MegaCrash**, licensed under
-  [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
-- [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) font by
-  **CodeMan38**, licensed under the
-  [SIL Open Font License](https://openfontlicense.org/).
+- Game art (birds, pipes, tiles, backgrounds) from the [Flappy Bird Assets](https://megacrash.itch.io/flappy-bird-assets) pack by **MegaCrash**, licensed under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+- [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) font by **CodeMan38**, licensed under the [SIL Open Font License](https://openfontlicense.org/).
 
 ## Deployment
 
