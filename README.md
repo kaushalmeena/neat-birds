@@ -4,6 +4,8 @@
 
 # NEAT Birds
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-3DA639?logo=opensourceinitiative&logoColor=white)](LICENSE) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org) [![Canvas](https://img.shields.io/badge/HTML5_Canvas-rendering-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/docs/Web/API/Canvas_API)
+
 **A Flappy Bird that evolves its own brain.**
 
 Watch a flock of 500 birds teach _themselves_ to fly through pipes using the
@@ -11,8 +13,6 @@ Watch a flock of 500 birds teach _themselves_ to fly through pipes using the
 TypeScript, with zero game or machine-learning libraries.
 
 [**Try it live**](https://kaushalmeena.github.io/neat-birds/)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-3DA639?logo=opensourceinitiative&logoColor=white)](LICENSE) [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org) [![Canvas](https://img.shields.io/badge/HTML5_Canvas-rendering-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/docs/Web/API/Canvas_API)
 
 </div>
 
