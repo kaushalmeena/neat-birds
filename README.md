@@ -125,6 +125,12 @@ npm run dev
 Your app should now be running on
 [localhost:5173/neat-birds/](http://localhost:5173/neat-birds/).
 
+## Deployment
+
+Every push to `main` is built and deployed to GitHub Pages automatically by the
+[deploy workflow](.github/workflows/deploy.yml). One-time setup: in the
+repository's **Settings > Pages**, set **Source** to **GitHub Actions**.
+
 ## Credits
 
 - Game art (birds, pipes, tiles, backgrounds) from the
@@ -134,12 +140,6 @@ Your app should now be running on
 - [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) font by
   **CodeMan38**, licensed under the
   [SIL Open Font License](https://openfontlicense.org/).
-
-## Deployment
-
-Every push to `main` is built and deployed to GitHub Pages automatically by the
-[deploy workflow](.github/workflows/deploy.yml). One-time setup: in the
-repository's **Settings > Pages**, set **Source** to **GitHub Actions**.
 
 ## Contributing
 
