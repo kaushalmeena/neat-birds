@@ -78,11 +78,11 @@ Repeat, and the birds get measurably better at threading the pipes.
 
 ## Tech Stack
 
-| Area          | Tools                                                                 |
-| ------------- | --------------------------------------------------------------------- |
-| **Language**  | [TypeScript](https://www.typescriptlang.org/) (ES modules)            |
-| **Rendering** | [HTML5 Canvas](https://developer.mozilla.org/docs/Web/API/Canvas_API) |
-| **Audio**     | [Web Audio API](https://developer.mozilla.org/docs/Web/API/Web_Audio_API) |
+| Area          | Tools                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| **Language**  | [TypeScript](https://www.typescriptlang.org/) (ES modules)                                  |
+| **Rendering** | [HTML5 Canvas](https://developer.mozilla.org/docs/Web/API/Canvas_API)                       |
+| **Audio**     | [Web Audio API](https://developer.mozilla.org/docs/Web/API/Web_Audio_API)                   |
 | **Tooling**   | [Vite](https://vite.dev/) · [ESLint](https://eslint.org/) · [Prettier](https://prettier.io) |
 
 ## Getting Started
@@ -124,6 +124,14 @@ npm run dev
 
 Your app should now be running on
 [localhost:5173/neat-birds/](http://localhost:5173/neat-birds/).
+
+### Testing
+
+To lint, check formatting and typecheck together:
+
+```bash
+npm run check
+```
 
 ## Deployment
 
