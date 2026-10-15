@@ -1,27 +1,39 @@
-<!--VITE PLUS START-->
+# NEAT Birds
 
-# Using Vite+, the Unified Toolchain for the Web
+A Flappy Bird clone where a population of 500 birds evolves with a
+hand-written NEAT implementation. It is plain TypeScript on an HTML5 canvas
+with **zero runtime dependencies**, so new behaviour is written by hand,
+not added from npm.
 
-This project is using Vite+, a unified toolchain built on top of Vite, Rolldown, Vitest, tsdown, Oxlint, Oxfmt, and Vite Task. Vite+ wraps runtime management, package management, and frontend tooling in a single global CLI called `vp`. Vite+ is distinct from Vite, and it invokes Vite through `vp dev` and `vp build`. Run `vp help` to print a list of commands and `vp <command> --help` for information about a specific command.
+## Docs
 
-Docs are local at `node_modules/vite-plus/docs` or online at https://viteplus.dev/guide/.
+Read the matching doc before changing that area:
 
-## Built-in Commands vs Scripts
+- [docs/architecture.md](docs/architecture.md): module map, game loop, screens/actions, input, global state
+- [docs/neat.md](docs/neat.md): genomes, innovation registry, mutation, crossover, speciation, generation breeding
+- [docs/save-files.md](docs/save-files.md): checkpoint JSON format and versioning
+- [docs/development.md](docs/development.md): Vite+ commands, lint/format config, CI and deploy
 
-`vp <name>` runs a built-in command. `vp run <name>` runs a `package.json` script or a `vite.config.ts` task. Scripts cannot overwrite built-ins, so `vp dev` and `vp run dev` may do different things. Check `package.json` and `vite.config.ts` first, and run `vp run <name>` when the project defines a script or task with that name.
+## Done means `vp check` passes
 
-## Tool Versions
+There are no tests. `vp check` (format, lint, and type check) is the whole
+gate; run `vp check --fix` first to apply formatting. Confirm gameplay
+changes in the running app (`vp dev`).
 
-Run `vp toolchain` to show versions and relationships in the active Vite+
-release. Add a tool name to select part of the graph. For example, run
-`vp toolchain vite`. Use `--global` to ignore the local `vite-plus` package. Use
-`vp why <package>` to show the package-manager dependency graph.
+## Gotchas
 
-## Review Checklist
-
-- [ ] Run `vp install` after pulling remote changes and before getting started.
-- [ ] Run `vp check` and `vp test` to format, lint, type check and test changes.
-- [ ] Check if there are `vite.config.ts` tasks or `package.json` scripts necessary for validation, run via `vp run <script>`.
-- [ ] If setup, runtime, or package-manager behavior looks wrong, run `vp env doctor` and include its output when asking for help.
-
-<!--VITE PLUS END-->
+- Every user-triggered state change goes through `performAction()` in
+  `src/utils/app.ts`; add a new `Action` there rather than mutating state
+  from input handlers.
+- Click hit-boxes in `src/main.ts` are hard-coded rectangles that mirror
+  where each screen draws its labels. When you move a label, move its
+  hit-box with it.
+- Training and autoplay run at a fixed pipe speed so every generation is
+  scored against the same environment; the speed ramp is standard-mode only.
+- Changing what is serialized, or the network's inputs and outputs, requires
+  bumping `SAVE_FILE_VERSION` in `src/state/index.ts`.
+- Any code that loads genomes must call `syncGenomeCounters()` afterwards.
+- Tunables live in `src/constants/`; put new magic numbers there with a
+  comment explaining them.
+- Mark an intentional fire-and-forget promise with `void`; type-aware lint
+  rejects floating promises.

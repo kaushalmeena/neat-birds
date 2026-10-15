@@ -76,14 +76,17 @@ In **training mode** the networks evolve rather than learn by backpropagation:
 
 Repeat, and the birds get measurably better at threading the pipes.
 
+For the details, see the [docs](docs/): [architecture](docs/architecture.md),
+[NEAT implementation](docs/neat.md) and [save files](docs/save-files.md).
+
 ## Tech Stack
 
-| Area          | Tools                                                                                       |
-| ------------- | ------------------------------------------------------------------------------------------- |
-| **Language**  | [TypeScript](https://www.typescriptlang.org/) (ES modules)                                  |
-| **Rendering** | [HTML5 Canvas](https://developer.mozilla.org/docs/Web/API/Canvas_API)                       |
-| **Audio**     | [Web Audio API](https://developer.mozilla.org/docs/Web/API/Web_Audio_API)                   |
-| **Tooling**   | [Vite](https://vite.dev/) · [ESLint](https://eslint.org/) · [Prettier](https://prettier.io) |
+| Area          | Tools                                                                     |
+| ------------- | ------------------------------------------------------------------------- |
+| **Language**  | [TypeScript](https://www.typescriptlang.org/) (ES modules)                |
+| **Rendering** | [HTML5 Canvas](https://developer.mozilla.org/docs/Web/API/Canvas_API)     |
+| **Audio**     | [Web Audio API](https://developer.mozilla.org/docs/Web/API/Web_Audio_API) |
+| **Tooling**   | [Vite+](https://viteplus.dev/) (Vite · Oxlint · Oxfmt)                    |
 
 ## Getting Started
 
@@ -94,7 +97,7 @@ local machine for development purposes.
 
 To install and run this project you need:
 
-- [Node.js](https://nodejs.org/) v18 or newer
+- [Node.js](https://nodejs.org/) 22.18+ or 24.11+
 - [git](https://git-scm.com/downloads) (only to clone this repository)
 
 ### Installation
@@ -127,11 +130,14 @@ Your app should now be running on
 
 ### Testing
 
-To lint, check formatting and typecheck together:
+To check formatting, lint and typecheck together:
 
 ```bash
 npm run check
 ```
+
+Run `npm run fix` to apply formatting and auto-fixable lint fixes. See
+[docs/development.md](docs/development.md) for more about the toolchain.
 
 ## Deployment
 
