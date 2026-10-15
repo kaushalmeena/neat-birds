@@ -8,7 +8,7 @@ function getAudioContext(): AudioContext {
     audio.context = new AudioContext();
   }
   if (audio.context.state === "suspended") {
-    audio.context.resume();
+    void audio.context.resume();
   }
   return audio.context;
 }

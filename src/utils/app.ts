@@ -48,7 +48,7 @@ export function performAction(action: Action): void {
       // Starting autoplay prompts for a saved file and plays its champion;
       // restarts below reuse the brain that is already loaded
       if (state.current.mode === Mode.AUTOPLAY) {
-        loadBrainForAutoplay(startGame);
+        void loadBrainForAutoplay(startGame);
       } else {
         startGame();
       }
@@ -72,7 +72,7 @@ export function performAction(action: Action): void {
       break;
     case Action.LOAD_STATE:
       // Restore the whole population and resume training on the main screen
-      loadStateForTraining(() => {
+      void loadStateForTraining(() => {
         state.current.activeScreen = Screen.MAIN;
       });
       break;

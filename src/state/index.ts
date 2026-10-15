@@ -91,7 +91,7 @@ function saveJsonFile(filename: string, data: unknown): void {
 
 // Opens a file picker and resolves the parsed JSON (or null on cancel/error).
 // The result is untyped external data, so `any` is the honest type here.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 function pickJsonFile(): Promise<any> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
@@ -194,7 +194,7 @@ export function saveStateToFile(): void {
 }
 
 // A full training checkpoint has the live simulation arrays
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 function isTrainingCheckpoint(payload: any): boolean {
   return (
     payload &&
