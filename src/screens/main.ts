@@ -21,19 +21,22 @@ import {
   PIPE_SPEED_RAMP,
   PIPE_WIDTH
 } from "../constants/pipe";
-import { resetState, setBestScore, state } from "../state";
+import { resetState, setBestScore, setChampion, state } from "../state";
 import type { Pipe } from "../types";
 import { drawBird, isBirdDead, think, updateBird } from "../utils/bird";
 import { context, drawText } from "../utils/canvas";
 import { nextGeneration } from "../utils/ga";
 import { createCopy, getRandomInteger } from "../utils/helper";
-import { getTrainingButtons, TRAINING_BUTTON_SIZE } from "../utils/menu";
+import { drawItems, getMainItems } from "../utils/menu";
 import { drawPipe, makePipeActive, updatePipe } from "../utils/pipe";
 import { playDeathSound, playScoreSound } from "../utils/sound";
 import { backgroundImages, groundSprite } from "../utils/sprites";
 
 // How many generations the fitness chart keeps
 const CHART_MAX_POINTS = 60;
+
+// Opacity of each training bird
+const FLOCK_OPACITY = 0.6;
 
 // Scroll offsets for the ground and background patterns (purely visual)
 const scrollOffsets = {
@@ -135,8 +138,7 @@ function breedNextGeneration(): void {
     const champion = state.current.deadBirds.reduce((a, b) =>
       b.distance > a.distance ? b : a
     );
-    state.current.bestBirdBrain = createCopy(champion.brain);
-    state.current.bestBirdColor = champion.color;
+    setChampion(createCopy(champion.brain), champion.color);
   }
   state.current.bestDistance = Math.max(
     generationBest,
@@ -242,28 +244,18 @@ function drawGround(advance: number): void {
   }
 }
 
+// Training birds are drawn translucent, so where the flock overlaps reads
+// as density instead of one solid blob
 function drawLiveBirds(): void {
-  for (let i = 0; i < state.current.liveBirds.length; i += 1) {
-    drawBird(state.current.liveBirds[i]);
+  context.globalAlpha = FLOCK_OPACITY;
+  for (const bird of state.current.liveBirds) {
+    drawBird(bird);
   }
-}
-
-function drawPauseButton(): void {
-  drawText("PAUSE", 420, 10, { color: "#f7dc6f" });
+  context.globalAlpha = 1;
 }
 
 function drawScoreText(): void {
   drawText(`SCORE:${state.current.score}`, 10, 10);
-}
-
-// Clickable speed, save and load buttons below the training panel
-function drawTrainingButtons(): void {
-  for (const item of getTrainingButtons(state.current.trainingSpeed)) {
-    drawText(item.label, item.x, item.y, {
-      size: TRAINING_BUTTON_SIZE,
-      color: "#f7dc6f"
-    });
-  }
 }
 
 // HUD panel in the top-right corner below the pause button, holding the
@@ -358,14 +350,13 @@ function drawMainScreen(ticks: number): void {
   drawActivePipes();
   drawGround(advance);
   drawScoreText();
-  drawPauseButton();
   if (state.current.mode === Mode.TRAINING) {
     drawLiveBirds();
     drawTrainingPanel();
-    drawTrainingButtons();
   } else {
     drawBird(state.current.playerBird);
   }
+  drawItems(getMainItems(state.current.mode, state.current.trainingSpeed));
 }
 
 export default drawMainScreen;

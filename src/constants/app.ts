@@ -37,7 +37,13 @@ export enum Action {
   QUIT_GAME = "quit_game",
   LOAD_STATE = "load_state",
   SAVE_STATE = "save_state",
-  TOGGLE_MODE = "toggle_mode",
+  NEXT_MODE = "next_mode",
+  PREVIOUS_MODE = "previous_mode",
+  SELECT_STANDARD = "select_standard",
+  SELECT_TRAINING = "select_training",
+  SELECT_AUTOPLAY = "select_autoplay",
+  WATCH_BEST = "watch_best",
+  LOAD_BRAIN = "load_brain",
   FLAP_WING = "flap_wing",
   CYCLE_SPEED = "cycle_speed"
 }

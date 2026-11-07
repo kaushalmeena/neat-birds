@@ -11,8 +11,16 @@ import { flap } from "./bird";
 import { createCopy, getRandomInteger, getRandomItem } from "./helper";
 import { playFlapSound } from "./sound";
 import { backgroundImages } from "./sprites";
+import { showToast } from "./toast";
 
 const MODE_CYCLE: Mode[] = [Mode.STANDARD, Mode.TRAINING, Mode.AUTOPLAY];
+
+// Moves the selected mode by `step` places, wrapping around
+function shiftMode(step: number): void {
+  const index = MODE_CYCLE.indexOf(state.current.mode);
+  state.current.mode =
+    MODE_CYCLE[(index + step + MODE_CYCLE.length) % MODE_CYCLE.length];
+}
 
 // Pick a fresh backdrop and player bird color for a new run
 function randomizeAppearance(): void {
@@ -23,13 +31,9 @@ function randomizeAppearance(): void {
   state.current.playerBird.color = getRandomItem(Object.values(BirdColor));
 }
 
-// Enter the main screen; in autoplay mode the player bird gets a copy
-// of the loaded brain (and refuses to start when there is none)
+// Enter the main screen; in autoplay mode the player bird gets a copy of
+// the champion brain (callers make sure one exists)
 function startGame(): void {
-  if (state.current.mode === Mode.AUTOPLAY && !state.current.bestBirdBrain) {
-    alert("No brain loaded yet - upload a brain file first!");
-    return;
-  }
   randomizeAppearance();
   if (state.current.mode === Mode.AUTOPLAY && state.current.bestBirdBrain) {
     state.current.playerBird.brain = createCopy(state.current.bestBirdBrain);
@@ -41,21 +45,44 @@ function startGame(): void {
   state.current.activeScreen = Screen.MAIN;
 }
 
+function restartGame(): void {
+  resetState();
+  startGame();
+}
+
+// Autoplay flies the remembered champion; without one, ask for a file
+function startAutoplay(): void {
+  if (state.current.bestBirdBrain) {
+    startGame();
+  } else {
+    void loadBrainForAutoplay(startGame);
+  }
+}
+
+// Leave training to watch its champion fly on its own. The interrupted
+// generation restarts when training resumes.
+function watchBest(): void {
+  if (!state.current.bestBirdBrain) {
+    showToast("No champion yet - let a generation finish");
+    return;
+  }
+  state.current.mode = Mode.AUTOPLAY;
+  restartGame();
+  showToast("Watching your best bird");
+}
+
 // Function to perform various game actions based on the provided action type
 export function performAction(action: Action): void {
   switch (action) {
     case Action.START_GAME:
-      // Starting autoplay prompts for a saved file and plays its champion;
-      // restarts below reuse the brain that is already loaded
       if (state.current.mode === Mode.AUTOPLAY) {
-        void loadBrainForAutoplay(startGame);
+        startAutoplay();
       } else {
         startGame();
       }
       break;
     case Action.RESTART_GAME:
-      resetState();
-      startGame();
+      restartGame();
       break;
     case Action.QUIT_GAME:
       resetState();
@@ -76,11 +103,27 @@ export function performAction(action: Action): void {
         state.current.activeScreen = Screen.MAIN;
       });
       break;
-    case Action.TOGGLE_MODE:
-      state.current.mode =
-        MODE_CYCLE[
-          (MODE_CYCLE.indexOf(state.current.mode) + 1) % MODE_CYCLE.length
-        ];
+    case Action.LOAD_BRAIN:
+      // Swap in another brain file and fly it from the start
+      void loadBrainForAutoplay(restartGame);
+      break;
+    case Action.WATCH_BEST:
+      watchBest();
+      break;
+    case Action.NEXT_MODE:
+      shiftMode(1);
+      break;
+    case Action.PREVIOUS_MODE:
+      shiftMode(-1);
+      break;
+    case Action.SELECT_STANDARD:
+      state.current.mode = Mode.STANDARD;
+      break;
+    case Action.SELECT_TRAINING:
+      state.current.mode = Mode.TRAINING;
+      break;
+    case Action.SELECT_AUTOPLAY:
+      state.current.mode = Mode.AUTOPLAY;
       break;
     case Action.FLAP_WING:
       // Only the player bird flaps by input; AI birds flap on their own

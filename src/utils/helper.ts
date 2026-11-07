@@ -8,18 +8,6 @@ export function getRandomItem<T>(arr: T[]): T {
   return arr[getRandomInteger(0, arr.length - 1)];
 }
 
-// Checks if point lies inside rectangle
-export function isPointInside(
-  pX: number,
-  pY: number,
-  rectX: number,
-  rectY: number,
-  rectW: number,
-  rectH: number
-): boolean {
-  return pX > rectX && pX < rectX + rectW && pY > rectY && pY < rectY + rectH;
-}
-
 // Checks if two rectangle overlap each other
 export function isRectangleOverlapping(
   rect1X: number,

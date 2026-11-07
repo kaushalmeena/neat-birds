@@ -42,6 +42,8 @@ export interface MenuItem {
   action: Action;
   x: number;
   y: number;
+  // Font size of the label (also its height)
+  size: number;
   width: number;
   height: number;
 }
