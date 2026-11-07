@@ -81,12 +81,12 @@ For the details, see the [docs](docs/): [architecture](docs/architecture.md),
 
 ## Tech Stack
 
-| Area          | Tools                                                                     |
-| ------------- | ------------------------------------------------------------------------- |
-| **Language**  | [TypeScript](https://www.typescriptlang.org/) (ES modules)                |
-| **Rendering** | [HTML5 Canvas](https://developer.mozilla.org/docs/Web/API/Canvas_API)     |
-| **Audio**     | [Web Audio API](https://developer.mozilla.org/docs/Web/API/Web_Audio_API) |
-| **Tooling**   | [Vite+](https://viteplus.dev/) (Vite · Oxlint · Oxfmt)                    |
+| Area          | Tools                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Language**  | [TypeScript](https://www.typescriptlang.org/) (ES modules)                                                                      |
+| **Rendering** | [HTML5 Canvas](https://developer.mozilla.org/docs/Web/API/Canvas_API)                                                           |
+| **Audio**     | [Web Audio API](https://developer.mozilla.org/docs/Web/API/Web_Audio_API)                                                       |
+| **Tooling**   | [Vite](https://vite.dev/), [Oxlint](https://oxc.rs/docs/guide/usage/linter), [Oxfmt](https://oxc.rs/docs/guide/usage/formatter) |
 
 ## Getting Started
 

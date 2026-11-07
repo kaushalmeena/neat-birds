@@ -12,13 +12,13 @@ Read the matching doc before changing that area:
 - [docs/architecture.md](docs/architecture.md): module map, game loop, screens/actions, input, global state
 - [docs/neat.md](docs/neat.md): genomes, innovation registry, mutation, crossover, speciation, generation breeding
 - [docs/save-files.md](docs/save-files.md): checkpoint JSON format and versioning
-- [docs/development.md](docs/development.md): Vite+ commands, lint/format config, CI and deploy
+- [docs/development.md](docs/development.md): npm scripts, Oxlint/Oxfmt config, CI and deploy
 
-## Done means `vp check` passes
+## Done means `npm run check` passes
 
-There are no tests. `vp check` (format, lint, and type check) is the whole
-gate; run `vp check --fix` first to apply formatting. Confirm gameplay
-changes in the running app (`vp dev`).
+There are no tests. `npm run check` (type check, lint, and format check) is
+the whole gate; run `npm run fix` first to apply formatting. Confirm gameplay
+changes in the running app (`npm run dev`).
 
 ## Gotchas
 
