@@ -18,7 +18,8 @@ screen is active.
 | `src/utils/ga.ts`      | Population: speciation, fitness sharing, elitism, breeding the next generation    |
 | `src/utils/sprites.ts` | Spritesheet regions for birds, pipes, ground; background images                   |
 | `src/utils/sound.ts`   | Chiptune effects synthesized with the Web Audio API                               |
-| `src/utils/menu.ts`    | Pause-menu items (shared by drawing and hit-testing)                              |
+| `src/utils/menu.ts`    | Every clickable label per screen, shared by drawing and hit-testing               |
+| `src/utils/toast.ts`   | Short in-canvas messages (`showToast()`), used instead of `alert()`               |
 | `src/utils/canvas.ts`  | The canvas element, its 2D context, and `drawText()`                              |
 | `src/utils/helper.ts`  | Small math/random/geometry helpers and `createCopy()` (deep clone)                |
 | `src/constants/*.ts`   | Tunables and enums, grouped by domain (`app`, `bird`, `pipe`, `neat`)             |
@@ -61,14 +62,33 @@ change triggered by the user goes through `performAction(Action)` in
 
 Input handlers in `main.ts` map keys and taps to actions:
 
-- Keyboard (main screen only): `Space` flaps, `Escape` pauses, `↑`/`↓` cycle
-  training speed.
-- Click and touch: coordinates are scaled to the 500×400 logical canvas,
-  then hit-tested against hard-coded rectangles per screen. These rectangles
-  must match where the screen draws its labels. The pause menu avoids the
-  duplication by hit-testing `getPauseMenuItems()`, the same list it draws,
-  and the training HUD buttons (speed, save, load) do the same with
-  `getTrainingButtons()`.
+- Keyboard (`KEY_ACTIONS`, on key press, ignoring auto-repeat):
+  - Title: `↑`/`↓` change mode, `Enter`/`Space` start.
+  - Main: `Space` flaps, `Esc`/`P` pause, `↑`/`↓` cycle training speed.
+  - Pause: `Esc`/`P` resume.
+  - Death: `Enter` restarts and `Esc` quits. `Space` is left out, so
+    mashing flap through a crash can't skip the death screen.
+- Pointer: positions are scaled to the 500×400 logical canvas and
+  hit-tested against `getScreenItems()`, the same `MenuItem` lists the
+  screens draw (`src/utils/menu.ts`). Buttons act on `click`, which counts
+  as a user gesture on every device, as the file picker and audio require.
+  Flapping acts on `pointerdown` so it doesn't wait for the release.
+
+## Champion and autoplay
+
+Whenever training sets a new best distance, `setChampion()` stores that
+brain in `localStorage` (key `champion`, stamped with `SAVE_FILE_VERSION`)
+as well as in `state.current.bestBirdBrain`. On startup the stored champion
+is loaded back, so:
+
+- Autoplay's START flies the remembered champion right away, and opens the
+  file picker only when there is none. Its pause menu has `LOAD BRAIN` to
+  swap in a file.
+- Training's pause menu has `WATCH BEST`, which switches to autoplay with
+  the current champion.
+
+Leaving training mid-generation (quit, or watch best) restarts that
+generation: `resetState()` returns the dead birds to the flock.
 
 ## State
 

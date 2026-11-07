@@ -47,8 +47,11 @@ TypeScript, with zero game or machine-learning libraries.
   species counts, plus a best-distance-per-generation chart.
 - **Speed multiplier** — fast-forward evolution at 1x/2x/4x/8x, or MAX, which
   simulates as many ticks as fit in each frame.
-- **Portable brains** — export the champion network to a JSON file and load it
-  back later to watch it fly.
+- **Watch your best bird** — the champion is remembered between visits, so
+  autoplay flies it straight away; pause training and pick **WATCH BEST** to
+  see it now.
+- **Portable brains** — export the whole training run or just the champion to
+  a JSON file and load it back later.
 - **Retro presentation** — pixel-art sprites, multiple randomized backdrops, and
   chiptune sound effects synthesized with the Web Audio API.
 

@@ -25,9 +25,10 @@ changes in the running app (`npm run dev`).
 - Every user-triggered state change goes through `performAction()` in
   `src/utils/app.ts`; add a new `Action` there rather than mutating state
   from input handlers.
-- Click hit-boxes in `src/main.ts` are hard-coded rectangles that mirror
-  where each screen draws its labels. When you move a label, move its
-  hit-box with it.
+- Every clickable label is a `MenuItem` from `src/utils/menu.ts`. Screens
+  draw those lists and `main.ts` hit-tests the same lists, so add or move a
+  button there, never as a hard-coded rectangle.
+- Use `showToast()` for user-facing messages, not `alert()`.
 - Training and autoplay run at a fixed pipe speed so every generation is
   scored against the same environment; the speed ramp is standard-mode only.
 - Changing what is serialized, or the network's inputs and outputs, requires

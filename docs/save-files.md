@@ -4,6 +4,11 @@ In training mode, the pause menu can download a checkpoint
 (`neat-birds-state.json`) and load one back. Autoplay mode loads the same
 file but uses only its champion brain. The code is in `src/state/index.ts`.
 
+Separately, the latest champion brain is kept in `localStorage` under
+`champion` as `{ version, brain, color }`, so autoplay works without a file
+(see [architecture.md](architecture.md#champion-and-autoplay)). Loading a
+file also updates it.
+
 ## Format (version 4)
 
 ```jsonc
@@ -52,4 +57,5 @@ exact saved frame. Loading deliberately skips `resetState()` for this reason.
 `SAVE_FILE_VERSION` gates both loaders, and there is no migration path.
 Bump it whenever the serialized shape or the genome's meaning changes, for
 example new fields or a different number of network inputs. Files with any
-other version are rejected with an alert.
+other version are rejected with a message, and a stored champion with any
+other version is ignored.
