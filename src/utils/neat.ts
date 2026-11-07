@@ -132,53 +132,100 @@ export function createGenome(inputCount: number, outputCount: number): Genome {
   return { nodes, connections };
 }
 
-// Function to evaluate the genome's network for the given inputs.
-// Input node ids match input array indices; returns one value per output node.
-export function feedForward(genome: Genome, inputs: number[]): number[] {
-  // Index enabled connections by their target node
+// A genome flattened for fast evaluation: node values live in a typed array
+// indexed by position, and non-input nodes are listed in dependency order
+// so one pass computes every value.
+interface Network {
+  values: Float64Array;
+  inputs: { index: number; inputId: number }[];
+  biases: number[];
+  steps: { index: number; sources: number[]; weights: number[] }[];
+  outputs: number[];
+}
+
+// Genomes are never mutated once a bird owns them (offspring get a fresh
+// copy), so each compiled network can be cached for the genome's lifetime
+const networks = new WeakMap<Genome, Network>();
+
+function compileGenome(genome: Genome): Network {
+  const indexOf = new Map(genome.nodes.map((node, index) => [node.id, index]));
   const incoming = new Map<number, ConnectionGene[]>();
+  const outgoing = new Map<number, number[]>();
+  const pending = new Map<number, number>();
   for (const conn of genome.connections) {
-    if (conn.enabled) {
-      const list = incoming.get(conn.to);
-      if (list) {
-        list.push(conn);
-      } else {
-        incoming.set(conn.to, [conn]);
+    if (conn.enabled && indexOf.has(conn.from) && indexOf.has(conn.to)) {
+      incoming.set(conn.to, [...(incoming.get(conn.to) ?? []), conn]);
+      outgoing.set(conn.from, [...(outgoing.get(conn.from) ?? []), conn.to]);
+      pending.set(conn.to, (pending.get(conn.to) ?? 0) + 1);
+    }
+  }
+  const network: Network = {
+    values: new Float64Array(genome.nodes.length),
+    inputs: [],
+    biases: [],
+    steps: [],
+    outputs: []
+  };
+  // Kahn's algorithm: start from nodes with no enabled inputs
+  const ready: number[] = [];
+  for (const node of genome.nodes) {
+    const index = indexOf.get(node.id) as number;
+    if (node.type === NodeType.INPUT) {
+      network.inputs.push({ index, inputId: node.id });
+    } else if (node.type === NodeType.BIAS) {
+      network.biases.push(index);
+    } else if (node.type === NodeType.OUTPUT) {
+      network.outputs.push(index);
+    }
+    if (!pending.get(node.id)) {
+      ready.push(node.id);
+    }
+  }
+  while (ready.length > 0) {
+    const id = ready.shift() as number;
+    const node = genome.nodes[indexOf.get(id) as number];
+    if (node.type === NodeType.HIDDEN || node.type === NodeType.OUTPUT) {
+      const conns = incoming.get(id) ?? [];
+      network.steps.push({
+        index: indexOf.get(id) as number,
+        sources: conns.map((conn) => indexOf.get(conn.from) as number),
+        weights: conns.map((conn) => conn.weight)
+      });
+    }
+    for (const to of outgoing.get(id) ?? []) {
+      const left = (pending.get(to) as number) - 1;
+      pending.set(to, left);
+      if (left === 0) {
+        ready.push(to);
       }
     }
   }
-  const values = new Map<number, number>();
-  for (const node of genome.nodes) {
-    if (node.type === NodeType.INPUT) {
-      values.set(node.id, inputs[node.id]);
-    } else if (node.type === NodeType.BIAS) {
-      values.set(node.id, 1);
-    }
+  return network;
+}
+
+// Function to evaluate the genome's network for the given inputs.
+// Input node ids match input array indices; returns one value per output node.
+export function feedForward(genome: Genome, inputs: number[]): number[] {
+  let network = networks.get(genome);
+  if (!network) {
+    network = compileGenome(genome);
+    networks.set(genome, network);
   }
-  // Resolve each node recursively through its incoming connections
-  const visiting = new Set<number>();
-  const getValue = (id: number): number => {
-    const cached = values.get(id);
-    if (cached !== undefined) {
-      return cached;
-    }
-    // Cycle guard - should not trigger since genomes stay feed-forward
-    if (visiting.has(id)) {
-      return 0;
-    }
-    visiting.add(id);
+  const { values } = network;
+  for (const { index, inputId } of network.inputs) {
+    values[index] = inputs[inputId];
+  }
+  for (const index of network.biases) {
+    values[index] = 1;
+  }
+  for (const { index, sources, weights } of network.steps) {
     let sum = 0;
-    for (const conn of incoming.get(id) ?? []) {
-      sum += conn.weight * getValue(conn.from);
+    for (let i = 0; i < sources.length; i += 1) {
+      sum += weights[i] * values[sources[i]];
     }
-    visiting.delete(id);
-    const value = sigmoid(sum);
-    values.set(id, value);
-    return value;
-  };
-  return genome.nodes
-    .filter((node) => node.type === NodeType.OUTPUT)
-    .map((node) => getValue(node.id));
+    values[index] = sigmoid(sum);
+  }
+  return network.outputs.map((index) => values[index]);
 }
 
 // Checks whether adding a from->to connection would create a cycle,
