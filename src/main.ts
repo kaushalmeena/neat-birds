@@ -2,9 +2,10 @@ import {
   Action,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
-  FRAME_DELAY,
+  MAX_FRAME_CATCHUP_MS,
   Mode,
-  Screen
+  Screen,
+  TICK_MS
 } from "./constants/app";
 import drawDeathScreen from "./screens/death";
 import drawMainScreen from "./screens/main";
@@ -118,13 +119,13 @@ function setup(): void {
   };
 }
 
-function draw(): void {
+function draw(ticks: number): void {
   switch (state.current.activeScreen) {
     case Screen.TITLE:
       drawTitleScreen();
       break;
     case Screen.MAIN:
-      drawMainScreen();
+      drawMainScreen(ticks);
       break;
     case Screen.PAUSE:
       drawPauseScreen();
@@ -136,11 +137,21 @@ function draw(): void {
   }
 }
 
-function animate(): void {
-  setTimeout(() => {
-    requestAnimationFrame(animate);
-    draw();
-  }, FRAME_DELAY);
+// Fixed-timestep loop: real time accumulates and is spent in whole
+// TICK_MS simulation ticks, so the game runs at the same speed on 60Hz and
+// 120Hz displays. Leftover time carries over to the next frame.
+const clock = { last: 0, accumulator: 0 };
+
+function animate(now: number): void {
+  clock.accumulator = Math.min(
+    clock.accumulator + now - clock.last,
+    MAX_FRAME_CATCHUP_MS
+  );
+  clock.last = now;
+  const ticks = Math.floor(clock.accumulator / TICK_MS);
+  clock.accumulator -= ticks * TICK_MS;
+  draw(ticks);
+  requestAnimationFrame(animate);
 }
 
 function start(): void {
@@ -149,7 +160,8 @@ function start(): void {
     .load("44px PressStart2P")
     .then(() => {
       setup();
-      animate();
+      clock.last = performance.now();
+      requestAnimationFrame(animate);
     })
     .catch(() => {
       alert("Couldn't load font!");

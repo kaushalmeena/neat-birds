@@ -1,4 +1,9 @@
-export const FRAME_DELAY = 10;
+// The simulation advances in fixed ticks of this length, independent of the
+// display's refresh rate; all per-tick physics constants assume it
+export const TICK_MS = 1000 / 60;
+// Most time a single frame may catch up on (e.g. after a stall), so the game
+// never fast-forwards in a burst
+export const MAX_FRAME_CATCHUP_MS = 100;
 
 export const CANVAS_WIDTH = 500;
 export const CANVAS_HEIGHT = 400;
@@ -9,8 +14,6 @@ export const GROUND_HEIGHT = 32;
 // Strength of the white wash over the backdrop (0 = off, 1 = solid),
 // so the foreground pipes and birds stand out against it
 export const BACKGROUND_FADE_OPACITY = 0.4;
-
-export const EXIT_X_POS = -80;
 
 export enum Mode {
   STANDARD = "standard",
@@ -39,6 +42,15 @@ export enum Action {
   CYCLE_SPEED = "cycle_speed"
 }
 
-// Simulation steps per rendered frame, cycled by the training speed button.
-// Higher values fast-forward evolution since rendering is the bottleneck.
-export const TRAINING_SPEEDS = [1, 2, 4, 8];
+// Training speed value meaning "turbo": instead of a fixed multiplier, run as
+// many ticks as fit in TURBO_BUDGET_MS each frame
+export const TURBO_SPEED = 0;
+export const TURBO_BUDGET_MS = 12;
+
+// Training speed multipliers (ticks per real-time tick), cycled by the
+// speed button
+export const TRAINING_SPEEDS = [1, 2, 4, 8, TURBO_SPEED];
+
+// A training generation ends once it passes this many pipes, so a bird
+// that never dies can't stall evolution forever
+export const TRAINING_MAX_SCORE = 50;

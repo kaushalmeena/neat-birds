@@ -1,6 +1,5 @@
 import type { Action, Mode, Screen } from "./constants/app";
 import type { BirdColor, Wing } from "./constants/bird";
-import type { PipeType } from "./constants/pipe";
 import type { Genome } from "./utils/neat";
 
 // A source region of the spritesheet (or a standalone image)
@@ -22,15 +21,18 @@ export interface Bird {
   // How many frames the bird has been alive (its raw fitness signal)
   distance: number;
   fitness: number;
-  // Pending timer that flips the wing back down after a flap
-  wingTimeout?: number;
+  // Simulation ticks left before the wing flips back down after a flap
+  wingTicks: number;
 }
 
+// An upper and a lower pipe with a gap between them
 export interface Pipe {
-  type: PipeType;
   x: number;
-  y: number;
+  // y of the gap's top edge; the gap's bottom edge is gapY + PIPE_GAP
+  gapY: number;
   colorIndex: number;
+  // Whether the pair has been counted towards the score
+  passed: boolean;
   active: boolean;
 }
 

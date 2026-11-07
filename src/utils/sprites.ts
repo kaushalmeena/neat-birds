@@ -39,8 +39,8 @@ export const groundSprite: Sprite = {
   sHeight: 16
 };
 
-// One 32x272 pipe per color, in LOWER orientation (cap at top);
-// UPPER pipes are drawn rotated 180 degrees
+// One 32x272 pipe per color, oriented as a lower pipe (cap at top);
+// upper pipes are drawn rotated 180 degrees
 export const pipeSprites: Sprite[] = Array.from(
   { length: PIPE_COLOR_COUNT },
   (_, index) => ({

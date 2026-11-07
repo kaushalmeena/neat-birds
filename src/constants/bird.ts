@@ -12,8 +12,13 @@ export const BIRD_START_Y = 50;
 
 export const BIRD_FALL_SPEED = 0.25;
 
+// Terminal velocity, so falls stay controllable (and dy has a known range
+// for the network input)
+export const BIRD_MAX_FALL_SPEED = 8;
+
 export const BIRD_FLAP_LIFT = -5;
-export const BIRD_FLAP_TIMEOUT = 80;
+// Ticks the wing stays up after a flap (about 80ms)
+export const BIRD_FLAP_TICKS = 5;
 
 export enum BirdColor {
   ORANGE = "orange",

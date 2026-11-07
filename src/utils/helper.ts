@@ -39,15 +39,6 @@ export function isRectangleOverlapping(
   );
 }
 
-// Returns normalized value between 0 and 1
-export function normalizeValue(
-  value: number,
-  minValue: number,
-  maxValue: number
-): number {
-  return (value - minValue) / (maxValue - minValue);
-}
-
 // Returns deep-copy of data
 export function createCopy<T>(data: T): T {
   return structuredClone(data);

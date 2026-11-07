@@ -12,14 +12,14 @@ import { backgroundImages } from "../utils/sprites";
 // entire live simulation - every bird (position, velocity, alive/dead,
 // fitness) and pipe - so training resumes from the exact same moment, plus
 // the champion genome so autoplay can replay the best bird from the file.
-const SAVE_FILE_VERSION = 3;
+const SAVE_FILE_VERSION = 4;
 
 const VALID_COLORS: BirdColor[] = Object.values(BirdColor);
 const sanitizeColor = (color: unknown): BirdColor | null =>
   VALID_COLORS.includes(color as BirdColor) ? (color as BirdColor) : null;
 
-// Only the fields that define a bird's state; the transient wing-flap timer
-// is intentionally left out (it would be a stale handle after reload).
+// Only the fields that define a bird's state; the few-tick wing-flap
+// animation counter is left out (the wing just settles on the next tick).
 function serializeBird(bird: Bird) {
   return {
     x: bird.x,
@@ -51,20 +51,20 @@ function reviveBird(data: ReturnType<typeof serializeBird>): Bird {
 
 function serializePipe(pipe: Pipe) {
   return {
-    type: pipe.type,
     x: pipe.x,
-    y: pipe.y,
+    gapY: pipe.gapY,
     colorIndex: pipe.colorIndex,
+    passed: pipe.passed,
     active: pipe.active
   };
 }
 
 function revivePipe(data: ReturnType<typeof serializePipe>): Pipe {
   return {
-    type: data.type,
     x: data.x,
-    y: data.y,
+    gapY: data.gapY,
     colorIndex: data.colorIndex ?? 0,
+    passed: Boolean(data.passed),
     active: Boolean(data.active)
   };
 }
