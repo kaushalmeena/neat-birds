@@ -27,6 +27,7 @@ import { drawBird, isBirdDead, think, updateBird } from "../utils/bird";
 import { context, drawText } from "../utils/canvas";
 import { nextGeneration } from "../utils/ga";
 import { createCopy, getRandomInteger } from "../utils/helper";
+import { getTrainingButtons, TRAINING_BUTTON_SIZE } from "../utils/menu";
 import { drawPipe, makePipeActive, updatePipe } from "../utils/pipe";
 import { playDeathSound, playScoreSound } from "../utils/sound";
 import { backgroundImages, groundSprite } from "../utils/sprites";
@@ -255,13 +256,14 @@ function drawScoreText(): void {
   drawText(`SCORE:${state.current.score}`, 10, 10);
 }
 
-// Clickable speed toggle shown just below the training panel / fitness chart
-function drawSpeedButton(): void {
-  const { trainingSpeed } = state.current;
-  const label = trainingSpeed === TURBO_SPEED ? "MAX" : `${trainingSpeed}x`;
-  drawText(`SPEED:${label}`, 320, 162, {
-    color: "#f7dc6f"
-  });
+// Clickable speed, save and load buttons below the training panel
+function drawTrainingButtons(): void {
+  for (const item of getTrainingButtons(state.current.trainingSpeed)) {
+    drawText(item.label, item.x, item.y, {
+      size: TRAINING_BUTTON_SIZE,
+      color: "#f7dc6f"
+    });
+  }
 }
 
 // HUD panel in the top-right corner below the pause button, holding the
@@ -360,7 +362,7 @@ function drawMainScreen(ticks: number): void {
   if (state.current.mode === Mode.TRAINING) {
     drawLiveBirds();
     drawTrainingPanel();
-    drawSpeedButton();
+    drawTrainingButtons();
   } else {
     drawBird(state.current.playerBird);
   }

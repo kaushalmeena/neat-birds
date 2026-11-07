@@ -22,7 +22,7 @@ screen is active.
 | `src/utils/canvas.ts`  | The canvas element, its 2D context, and `drawText()`                              |
 | `src/utils/helper.ts`  | Small math/random/geometry helpers and `createCopy()` (deep clone)                |
 | `src/constants/*.ts`   | Tunables and enums, grouped by domain (`app`, `bird`, `pipe`, `neat`)             |
-| `src/types.ts`         | Shared interfaces: `Bird`, `Pipe`, `GameState`, `Sprite`, `PauseMenuItem`         |
+| `src/types.ts`         | Shared interfaces: `Bird`, `Pipe`, `GameState`, `Sprite`, `MenuItem`              |
 
 ## Game loop
 
@@ -66,7 +66,9 @@ Input handlers in `main.ts` map keys and taps to actions:
 - Click and touch: coordinates are scaled to the 500×400 logical canvas,
   then hit-tested against hard-coded rectangles per screen. These rectangles
   must match where the screen draws its labels. The pause menu avoids the
-  duplication by hit-testing `getPauseMenuItems()`, the same list it draws.
+  duplication by hit-testing `getPauseMenuItems()`, the same list it draws,
+  and the training HUD buttons (speed, save, load) do the same with
+  `getTrainingButtons()`.
 
 ## State
 

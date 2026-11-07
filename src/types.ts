@@ -36,7 +36,8 @@ export interface Pipe {
   active: boolean;
 }
 
-export interface PauseMenuItem {
+// A clickable text label: drawn and hit-tested from the same data
+export interface MenuItem {
   label: string;
   action: Action;
   x: number;

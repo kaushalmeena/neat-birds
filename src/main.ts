@@ -15,7 +15,11 @@ import { state } from "./state";
 import { performAction } from "./utils/app";
 import { canvas, context } from "./utils/canvas";
 import { isPointInside } from "./utils/helper";
-import { getPauseMenuItems } from "./utils/menu";
+import {
+  getPauseMenuItems,
+  getTrainingButtons,
+  isPointOnItem
+} from "./utils/menu";
 
 import "./style.css";
 
@@ -59,12 +63,14 @@ function setup(): void {
         if (isPointInside(x, y, 420, 10, 80, 14)) {
           performAction(Action.PAUSE_GAME);
         }
-        // When the training 'SPEED' toggle is clicked
-        else if (
-          state.current.mode === Mode.TRAINING &&
-          isPointInside(x, y, 318, 160, 130, 20)
-        ) {
-          performAction(Action.CYCLE_SPEED);
+        // Training HUD buttons (speed, save state, load state)
+        else if (state.current.mode === Mode.TRAINING) {
+          const button = getTrainingButtons(state.current.trainingSpeed).find(
+            (item) => isPointOnItem(x, y, item)
+          );
+          if (button) {
+            performAction(button.action);
+          }
         } else {
           performAction(Action.FLAP_WING);
         }
