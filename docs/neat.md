@@ -11,18 +11,21 @@ Each bird's `brain` is a `Genome`: a list of node genes (input, bias, hidden,
 output) and connection genes (`from`, `to`, `weight`, `enabled`,
 `innovation`).
 
-- **Inputs (5)**, normalized to roughly 0–1 by `think()` in `bird.ts`:
-  1. bird's distance from the top of the screen
-  2. bird's distance from the bottom of the screen
-  3. horizontal distance to the next pipe
-  4. vertical distance to the top edge of the gap
-  5. vertical distance to the bottom edge of the gap
+- **Inputs (5)**, scaled to roughly -1..1 by `think()` in `bird.ts`, all
+  measured against the next pipe pair:
+  1. bird's height within the playfield
+  2. bird's vertical velocity (`dy / BIRD_MAX_FALL_SPEED`)
+  3. horizontal distance to the pair's leading edge
+  4. distance from the gap's top edge down to the bird
+  5. distance from the bird down to the gap's bottom edge
 - **Bias**: one extra node fixed at 1.
 - **Output (1)**: the bird flaps when it is above 0.5.
 
-`feedForward()` resolves each output recursively through enabled incoming
-connections, using the steepened sigmoid `1 / (1 + e^(-4.9x))` from the
-paper. Genomes stay acyclic: `mutateAddConnection()` rejects any edge that
+`feedForward()` uses the steepened sigmoid `1 / (1 + e^(-4.9x))` from the
+paper. The first time a genome is evaluated it is compiled (topologically
+sorted, with node values in a typed array) and cached in a `WeakMap`, so
+every later call is one flat pass. This relies on genomes never being
+mutated after a bird owns them: offspring always get a fresh copy. Genomes stay acyclic: `mutateAddConnection()` rejects any edge that
 would create a cycle.
 
 ## Innovation registry
@@ -71,9 +74,13 @@ new one. Species are colored in rotation so speciation is visible.
 
 ## Producing a generation
 
+A generation ends when every bird has died, or when it passes
+`TRAINING_MAX_SCORE` pipes (`src/constants/app.ts`). At that point the
+survivors count as dead too, so a perfect bird can't stall evolution.
+
 `nextGeneration()` in `ga.ts`:
 
-1. Sets `fitness = distance²` (frames survived, squared).
+1. Sets `fitness = distance²` (ticks survived, squared).
 2. Speciates the population.
 3. Scores each species by mean fitness (fitness sharing).
 4. Copies the overall top `GLOBAL_ELITE_COUNT` birds unchanged, so the best

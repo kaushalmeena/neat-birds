@@ -45,8 +45,8 @@ TypeScript, with zero game or machine-learning libraries.
   structural mutation, all hand-written.
 - **Training dashboard** — live best-distance, generation, population, and
   species counts, plus a best-distance-per-generation chart.
-- **Speed multiplier** — fast-forward evolution at 1x/2x/4x/8x since rendering,
-  not simulation, is the bottleneck.
+- **Speed multiplier** — fast-forward evolution at 1x/2x/4x/8x, or MAX, which
+  simulates as many ticks as fit in each frame.
 - **Portable brains** — export the champion network to a JSON file and load it
   back later to watch it fly.
 - **Retro presentation** — pixel-art sprites, multiple randomized backdrops, and

@@ -13,7 +13,7 @@ screen is active.
 | `src/screens/*.ts`     | One `draw*Screen()` per `Screen`; `main.ts` also runs the simulation              |
 | `src/utils/app.ts`     | `performAction()`: the single dispatcher for every `Action`                       |
 | `src/utils/bird.ts`    | Bird physics, collision, drawing, and `think()` (network inputs → flap)           |
-| `src/utils/pipe.ts`    | Pipe pool: create, activate/deactivate, move, draw                                |
+| `src/utils/pipe.ts`    | Pipe-pair pool: create, activate/deactivate, move, draw                           |
 | `src/utils/neat.ts`    | Genome encoding, innovation registry, feed-forward, mutation, crossover, distance |
 | `src/utils/ga.ts`      | Population: speciation, fitness sharing, elitism, breeding the next generation    |
 | `src/utils/sprites.ts` | Spritesheet regions for birds, pipes, ground; background images                   |
@@ -26,14 +26,18 @@ screen is active.
 
 ## Game loop
 
-`main.ts` calls `animate()`, which schedules `requestAnimationFrame` behind a
-`setTimeout(FRAME_DELAY)` and calls `draw()`. `draw()` switches on
+`main.ts` runs a fixed-timestep loop on `requestAnimationFrame`. Elapsed
+time accumulates (capped at `MAX_FRAME_CATCHUP_MS`) and is spent in whole
+`TICK_MS` (1/60 s) ticks, so the game runs at the same speed on any refresh
+rate. All physics constants are per tick. `draw(ticks)` switches on
 `state.current.activeScreen` and calls the matching screen function.
 
-Only the main screen does simulation. Each frame `drawMainScreen()`:
+Only the main screen does simulation. Each frame `drawMainScreen(ticks)`:
 
-1. Runs `simulate()` once, or `trainingSpeed` times in training mode
-   (the 1x/2x/4x/8x fast-forward). It stops early if a tick ends the run.
+1. Runs `simulate()` `ticks` times, or `ticks × trainingSpeed` times in
+   training mode (1x/2x/4x/8x). At `MAX` (`TURBO_SPEED`) it instead runs as
+   many ticks as fit in `TURBO_BUDGET_MS`. It stops early if a tick ends the
+   run.
 2. Draws background, pipes, ground, HUD, and birds.
 
 `simulate()` advances the pipes, then updates birds according to the mode:
@@ -42,7 +46,8 @@ Only the main screen does simulation. Each frame `drawMainScreen()`:
   screen and may record a new best score in `localStorage`.
 - **Autoplay**: the player bird runs a loaded champion genome via `think()`.
 - **Training**: every live bird runs `think()`; dead birds move to
-  `deadBirds`. When none are left, `breedNextGeneration()` records stats,
+  `deadBirds`. Reaching `TRAINING_MAX_SCORE` ends the generation. When none
+  are left, `breedNextGeneration()` records stats,
   keeps the champion brain, and calls `nextGeneration()` from `ga.ts`.
 
 Pipe speed ramps with score in standard mode only. Training and autoplay use
