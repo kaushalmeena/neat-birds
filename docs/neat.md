@@ -69,9 +69,20 @@ re-enabled with probability `GENE_REENABLE_RATE`.
 ```
 
 where `N` is the larger genome's connection count, or 1 when both genomes
-have fewer than 20 connections. Birds join the first species whose
-representative is within `COMPATIBILITY_THRESHOLD`; otherwise they found a
-new one. Species are colored in rotation so speciation is visible.
+have fewer than 20 connections.
+
+Species persist across generations (`state.current.species`, type `Species`
+in `src/types.ts`). `speciate(birds, species)` in `ga.ts` sorts each new bird
+into the first existing species whose representative is within
+`COMPATIBILITY_THRESHOLD`, or founds a new species. Birds are speciated as
+soon as they are born, so each bird wears its species' color while it flies.
+A new species takes the color fewest living species wear, and keeps it for
+life, so you can watch a lineage spread or die out. Species left with no
+members are dropped.
+
+Each species tracks its best-ever member fitness. If that hasn't improved
+for `SPECIES_STAGNATION_LIMIT` generations, the species stops reproducing,
+unless it holds the overall champion.
 
 ## Producing a generation
 
@@ -82,8 +93,9 @@ survivors count as dead too, so a perfect bird can't stall evolution.
 `nextGeneration()` in `ga.ts`:
 
 1. Sets `fitness = distance²` (ticks survived, squared).
-2. Speciates the population.
-3. Scores each species by mean fitness (fitness sharing).
+2. Updates each species' best fitness and stagnation count, and drops
+   stagnant species (except the champion's).
+3. Scores each remaining species by mean fitness (fitness sharing).
 4. Copies the overall top `GLOBAL_ELITE_COUNT` birds unchanged, so the best
    distance never regresses.
 5. Gives each species offspring in proportion to its share of total score.
@@ -93,6 +105,8 @@ survivors count as dead too, so a perfect bird can't stall evolution.
    then mutates it.
 7. Trims or tops up (from the overall best bird) to exactly
    `BIRD_CREATE_LIMIT` (500).
+8. Gives each species a random member of the finished generation as its new
+   representative, as in the NEAT paper, then speciates the new birds.
 
 ## Tuning
 

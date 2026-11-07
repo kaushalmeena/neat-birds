@@ -49,3 +49,9 @@ export const ELITE_SPECIES_SIZE = 5;
 // The overall fittest birds always survive unchanged, regardless of
 // their species size, so the champion is never lost to unlucky breeding
 export const GLOBAL_ELITE_COUNT = 1;
+
+// A species whose best fitness hasn't improved for this many generations
+// stops reproducing, freeing its offspring quota for species that are
+// still making progress. The species holding the overall champion is
+// always spared.
+export const SPECIES_STAGNATION_LIMIT = 15;

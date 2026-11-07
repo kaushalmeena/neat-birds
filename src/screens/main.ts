@@ -149,9 +149,10 @@ function breedNextGeneration(): void {
   if (state.current.distanceHistory.length > CHART_MAX_POINTS) {
     state.current.distanceHistory.shift();
   }
-  const { birds, speciesCount } = nextGeneration(state.current.deadBirds);
+  // Every bird of the finished generation is a member of some species
+  const { birds, species } = nextGeneration(state.current.species);
   state.current.liveBirds = birds;
-  state.current.speciesCount = speciesCount;
+  state.current.species = species;
   state.current.deadBirds = [];
   resetState();
 }
@@ -273,7 +274,7 @@ function drawTrainingPanel(): void {
     ["BEST-DIST", state.current.bestDistance],
     ["GENERATION", state.current.generation],
     ["ALIVE", `${state.current.liveBirds.length}/${BIRD_CREATE_LIMIT}`],
-    ["SPECIES", state.current.speciesCount]
+    ["SPECIES", state.current.species.length]
   ];
   lines.forEach(([label, value], index) => {
     drawText(
