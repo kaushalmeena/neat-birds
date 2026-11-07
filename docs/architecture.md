@@ -74,6 +74,9 @@ Input handlers in `main.ts` map keys and taps to actions:
   as a user gesture on every device, as the file picker and audio require.
   Flapping acts on `pointerdown` so it doesn't wait for the release.
 
+The game pauses itself when the tab is hidden (`visibilitychange`), since
+the loop stops while hidden anyway.
+
 ## Champion and autoplay
 
 Whenever training sets a new best distance, `setChampion()` stores that

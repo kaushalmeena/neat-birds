@@ -16,9 +16,11 @@ Read the matching doc before changing that area:
 
 ## Done means `npm run check` passes
 
-There are no tests. `npm run check` (type check, lint, and format check) is
-the whole gate; run `npm run fix` first to apply formatting. Confirm gameplay
-changes in the running app (`npm run dev`).
+`npm run check` (type check, lint, format check, and Vitest) is the whole
+gate; run `npm run fix` first to apply formatting. Tests live in
+`src/__tests__/` and cover the DOM-free NEAT code (`src/utils/neat.ts`);
+everything that touches the canvas is confirmed in the running app
+(`npm run dev`).
 
 ## Gotchas
 

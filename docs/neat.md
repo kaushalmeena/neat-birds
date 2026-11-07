@@ -105,7 +105,11 @@ survivors count as dead too, so a perfect bird can't stall evolution.
    then mutates it.
 7. Trims or tops up (from the overall best bird) to exactly
    `BIRD_CREATE_LIMIT` (500).
-8. Gives each species a random member of the finished generation as its new
+8. Marks the global elites with `elite: true`. Training draws an elite
+   solid with a white ring on top of the translucent flock, so you can
+   follow last generation's champion. Every training bird starts at a
+   random height up to `BIRD_SPAWN_SPREAD` below the start point.
+9. Gives each species a random member of the finished generation as its new
    representative, as in the NEAT paper, then speciates the new birds.
 
 ## Tuning

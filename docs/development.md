@@ -19,20 +19,33 @@ The project builds with [Vite](https://vite.dev/), lints with
 
 ## Commands
 
-| npm script             | Runs                          | Purpose                                           |
-| ---------------------- | ----------------------------- | ------------------------------------------------- |
-| `npm run dev`          | `vite`                        | Dev server at `http://localhost:5173/neat-birds/` |
-| `npm run build`        | `vite build`                  | Production build into `dist/`                     |
-| `npm run preview`      | `vite preview`                | Serve the built `dist/`                           |
-| `npm run typecheck`    | `tsc`                         | Type check (`noEmit` is set in `tsconfig.json`)   |
-| `npm run lint`         | `oxlint --type-aware`         | Lint, including type-aware rules                  |
-| `npm run format`       | `oxfmt`                       | Format every file in place                        |
-| `npm run format:check` | `oxfmt --check`               | Fail if anything is unformatted                   |
-| `npm run check`        | typecheck, lint, format:check | The gate for every change; CI runs it             |
-| `npm run fix`          | `lint:fix` then `format`      | Apply auto-fixable lint fixes and formatting      |
+| npm script             | Runs                                | Purpose                                           |
+| ---------------------- | ----------------------------------- | ------------------------------------------------- |
+| `npm run dev`          | `vite`                              | Dev server at `http://localhost:5173/neat-birds/` |
+| `npm run build`        | `vite build`                        | Production build into `dist/`                     |
+| `npm run preview`      | `vite preview`                      | Serve the built `dist/`                           |
+| `npm run typecheck`    | `tsc`                               | Type check (`noEmit` is set in `tsconfig.json`)   |
+| `npm run lint`         | `oxlint --type-aware`               | Lint, including type-aware rules                  |
+| `npm run format`       | `oxfmt`                             | Format every file in place                        |
+| `npm run format:check` | `oxfmt --check`                     | Fail if anything is unformatted                   |
+| `npm run test`         | `vitest run`                        | Run the unit tests once                           |
+| `npm run check`        | typecheck, lint, format:check, test | The gate for every change; CI runs it             |
+| `npm run fix`          | `lint:fix` then `format`            | Apply auto-fixable lint fixes and formatting      |
 
-There is no test suite yet. `npm run check` is the gate for every change,
-and CI runs it before building.
+`npm run check` is the gate for every change, and CI runs it before
+building.
+
+## Tests
+
+[Vitest](https://vitest.dev/) tests live in `src/__tests__/`. They cover
+`src/utils/neat.ts` (genome creation, feed-forward, mutation invariants,
+crossover, compatibility distance, and the innovation registry), which has
+no DOM dependencies. Modules that import the canvas (`bird.ts`, `ga.ts`,
+`pipe.ts`, …) aren't unit tested; check those in the running game.
+
+The innovation registry is module state shared by every test in a file. A
+test that needs a clean registry calls `vi.resetModules()` and imports
+`neat.ts` again.
 
 ## Linting
 
