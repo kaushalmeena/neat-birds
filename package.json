@@ -14,8 +14,9 @@
     "lint:fix": "oxlint --type-aware --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
+    "test": "vitest run",
     "typecheck": "tsc",
-    "check": "npm run typecheck && npm run lint && npm run format:check",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
     "fix": "npm run lint:fix && npm run format"
   },
   "devDependencies": {
@@ -23,6 +24,7 @@
     "oxlint": "^1.92.0",
     "oxlint-tsgolint": "^7.0.2006",
     "typescript": "^5.9.3",
-    "vite": "^8.3.6"
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
   }
 }
