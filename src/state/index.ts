@@ -1,7 +1,7 @@
 import { Mode, Screen } from "../constants/app";
 import { BirdColor } from "../constants/bird";
 import type { Bird, GameState, Pipe, Species } from "../types";
-import { createBird, resetBird } from "../utils/bird";
+import { createBird, getSpawnY, resetBird } from "../utils/bird";
 import { createPopulation, speciate, syncSpeciesIds } from "../utils/ga";
 import { getRandomInteger } from "../utils/helper";
 import type { Genome } from "../utils/neat";
@@ -32,6 +32,7 @@ function serializeBird(bird: Bird) {
     wing: bird.wing,
     distance: bird.distance,
     fitness: bird.fitness,
+    elite: bird.elite,
     brain: bird.brain
   };
 }
@@ -45,7 +46,8 @@ function reviveBird(data: ReturnType<typeof serializeBird>): Bird {
     dy: data.dy,
     color: data.color,
     wing: data.wing,
-    brain: data.brain
+    brain: data.brain,
+    elite: Boolean(data.elite)
   });
   bird.distance = data.distance ?? 0;
   bird.fitness = data.fitness ?? 0;
@@ -229,7 +231,9 @@ export function resetState(): void {
   // already died rejoin the flock, and everyone goes back to the start
   state.current.liveBirds.push(...state.current.deadBirds);
   state.current.deadBirds = [];
-  state.current.liveBirds.forEach(resetBird);
+  for (const bird of state.current.liveBirds) {
+    resetBird(bird, getSpawnY());
+  }
   state.current.pipes.forEach(makePipeInactive);
 }
 

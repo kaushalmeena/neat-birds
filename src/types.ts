@@ -18,14 +18,15 @@ export interface Bird {
   y: number;
   dy: number;
   brain: Genome;
-  // How many frames the bird has been alive (its raw fitness signal)
+  // How many ticks the bird has been alive (its raw fitness signal)
   distance: number;
   fitness: number;
+  // Carried over unchanged as the previous generation's overall champion
+  elite: boolean;
   // Simulation ticks left before the wing flips back down after a flap
   wingTicks: number;
 }
 
-// An upper and a lower pipe with a gap between them
 // A niche of similar genomes that persists across generations
 export interface Species {
   id: number;
@@ -41,6 +42,7 @@ export interface Species {
   staleGenerations: number;
 }
 
+// An upper and a lower pipe with a gap between them
 export interface Pipe {
   x: number;
   // y of the gap's top edge; the gap's bottom edge is gapY + PIPE_GAP

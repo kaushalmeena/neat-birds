@@ -9,7 +9,7 @@ import {
 } from "../constants/neat";
 import type { Bird, Species } from "../types";
 import type { Genome } from "./neat";
-import { createBird } from "./bird";
+import { createBird, getSpawnY } from "./bird";
 import { createCopy, getRandomItem } from "./helper";
 import { compatibilityDistance, crossoverGenomes, mutateGenome } from "./neat";
 
@@ -95,7 +95,7 @@ function createChild(parents: Bird[]): Bird {
 export function createPopulation(): { birds: Bird[]; species: Species[] } {
   const birds: Bird[] = [];
   for (let i = 0; i < BIRD_CREATE_LIMIT; i += 1) {
-    birds.push(createBird());
+    birds.push(createBird({ y: getSpawnY() }));
   }
   return { birds, species: speciate(birds, []) };
 }
@@ -154,7 +154,7 @@ export function nextGeneration(species: Species[]): {
   // even if their species is too small for per-species elitism. This makes
   // the recorded best distance monotonic - the champion can never be lost.
   for (let i = 0; i < GLOBAL_ELITE_COUNT && i < ranked.length; i += 1) {
-    newBirds.push(createBird({ brain: ranked[i].brain }));
+    newBirds.push(createBird({ brain: ranked[i].brain, elite: true }));
   }
 
   survivors.forEach((s, index) => {

@@ -9,7 +9,12 @@ import {
   TURBO_BUDGET_MS,
   TURBO_SPEED
 } from "../constants/app";
-import { BIRD_CREATE_LIMIT, BIRD_START_X } from "../constants/bird";
+import {
+  BIRD_CREATE_LIMIT,
+  BIRD_HEIGHT,
+  BIRD_START_X,
+  BIRD_WIDTH
+} from "../constants/bird";
 import {
   PIPE_ACTIVE_LIMIT,
   PIPE_EXIT_X,
@@ -22,7 +27,7 @@ import {
   PIPE_WIDTH
 } from "../constants/pipe";
 import { resetState, setBestScore, setChampion, state } from "../state";
-import type { Pipe } from "../types";
+import type { Bird, Pipe } from "../types";
 import { drawBird, isBirdDead, think, updateBird } from "../utils/bird";
 import { context, drawText } from "../utils/canvas";
 import { nextGeneration } from "../utils/ga";
@@ -37,6 +42,8 @@ const CHART_MAX_POINTS = 60;
 
 // Opacity of each training bird
 const FLOCK_OPACITY = 0.6;
+// Radius of the ring marking the elite bird
+const ELITE_RING_RADIUS = 19;
 
 // Scroll offsets for the ground and background patterns (purely visual)
 const scrollOffsets = {
@@ -246,13 +253,33 @@ function drawGround(advance: number): void {
 }
 
 // Training birds are drawn translucent, so where the flock overlaps reads
-// as density instead of one solid blob
+// as density instead of one solid blob. The elite (last generation's
+// champion) is drawn last, solid and ringed, so you can follow it.
 function drawLiveBirds(): void {
+  let elite: Bird | null = null;
   context.globalAlpha = FLOCK_OPACITY;
   for (const bird of state.current.liveBirds) {
-    drawBird(bird);
+    if (bird.elite) {
+      elite = bird;
+    } else {
+      drawBird(bird);
+    }
   }
   context.globalAlpha = 1;
+  if (elite) {
+    drawBird(elite);
+    context.strokeStyle = "white";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(
+      elite.x + BIRD_WIDTH / 2,
+      elite.y + BIRD_HEIGHT / 2,
+      ELITE_RING_RADIUS,
+      0,
+      Math.PI * 2
+    );
+    context.stroke();
+  }
 }
 
 function drawScoreText(): void {

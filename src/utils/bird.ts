@@ -4,6 +4,7 @@ import {
   BIRD_FALL_SPEED,
   BIRD_FLAP_TICKS,
   BIRD_MAX_FALL_SPEED,
+  BIRD_SPAWN_SPREAD,
   BIRD_HEIGHT,
   BIRD_HITBOX_INSET,
   BIRD_FLAP_LIFT,
@@ -22,7 +23,7 @@ import {
 import type { Bird, Pipe } from "../types";
 import type { Genome } from "./neat";
 import { context } from "./canvas";
-import { createCopy, isRectangleOverlapping } from "./helper";
+import { createCopy, getRandomInteger, isRectangleOverlapping } from "./helper";
 import { createGenome, feedForward } from "./neat";
 import { getLowerPipeY, getUpperPipeY } from "./pipe";
 import { birdSprites } from "./sprites";
@@ -34,6 +35,7 @@ interface CreateBirdOptions {
   color?: BirdColor;
   wing?: Wing;
   brain?: Genome;
+  elite?: boolean;
 }
 
 // Function to create a bird object with specified or default properties
@@ -43,7 +45,8 @@ export function createBird({
   dy,
   color,
   wing,
-  brain
+  brain,
+  elite
 }: CreateBirdOptions = {}): Bird {
   return {
     // Color of bird (default to green)
@@ -63,7 +66,9 @@ export function createBird({
     // Distance is how many ticks it's been alive
     distance: 0,
     // Fitness is normalized version of distance
-    fitness: 0
+    fitness: 0,
+    // Whether this bird is last generation's champion, carried over
+    elite: elite ?? false
   };
 }
 
@@ -113,10 +118,15 @@ export function flap(bird: Bird): void {
   bird.wing = Wing.UP;
 }
 
+// A random starting height for a training bird
+export function getSpawnY(): number {
+  return BIRD_START_Y + getRandomInteger(0, BIRD_SPAWN_SPREAD);
+}
+
 // Function to reset a bird back to its starting position and stats
-export function resetBird(bird: Bird): void {
+export function resetBird(bird: Bird, y: number = BIRD_START_Y): void {
   bird.x = BIRD_START_X;
-  bird.y = BIRD_START_Y;
+  bird.y = y;
   bird.dy = 0;
   bird.wing = Wing.DOWN;
   bird.wingTicks = 0;

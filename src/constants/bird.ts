@@ -9,6 +9,9 @@ export const BIRD_HITBOX_INSET = 4;
 
 export const BIRD_START_X = 50;
 export const BIRD_START_Y = 50;
+// Training birds start at a random height up to this far below
+// BIRD_START_Y, so the flock is visible as a flock from the first frame
+export const BIRD_SPAWN_SPREAD = 80;
 
 export const BIRD_FALL_SPEED = 0.25;
 
