@@ -86,6 +86,14 @@ function handleClick(event: MouseEvent): void {
   }
 }
 
+// Pause automatically when the tab is hidden, so a run doesn't sit frozen
+// mid-flight (the loop stops while hidden) and resume with no warning
+function handleVisibilityChange(): void {
+  if (document.hidden && state.current.activeScreen === Screen.MAIN) {
+    performAction(Action.PAUSE_GAME);
+  }
+}
+
 function setup(): void {
   // Set canvas height and width;
   canvas.height = CANVAS_HEIGHT;
@@ -96,6 +104,7 @@ function setup(): void {
   document.addEventListener("keydown", handleKeyDown);
   canvas.addEventListener("pointerdown", handlePointerDown);
   canvas.addEventListener("click", handleClick);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 }
 
 function draw(ticks: number): void {
