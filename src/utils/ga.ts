@@ -4,42 +4,76 @@ import {
   CROSSOVER_RATE,
   ELITE_SPECIES_SIZE,
   GLOBAL_ELITE_COUNT,
+  SPECIES_STAGNATION_LIMIT,
   SURVIVAL_RATE
 } from "../constants/neat";
-import type { Bird } from "../types";
+import type { Bird, Species } from "../types";
 import type { Genome } from "./neat";
-import { createBird } from "./bird";
+import { createBird, getSpawnY } from "./bird";
 import { createCopy, getRandomItem } from "./helper";
 import { compatibilityDistance, crossoverGenomes, mutateGenome } from "./neat";
 
-interface Species {
-  representative: Genome;
-  members: Bird[];
-  score: number;
+const SPECIES_COLORS: BirdColor[] = Object.values(BirdColor);
+
+// Next id for a newly founded species
+const speciesIds = { next: 0 };
+
+// Keeps new species ids ahead of loaded ones, like syncGenomeCounters()
+export function syncSpeciesIds(species: Species[]): void {
+  for (const s of species) {
+    speciesIds.next = Math.max(speciesIds.next, s.id + 1);
+  }
 }
 
-// Function to group birds into species by genome compatibility, so new
+// A new species takes the color fewest living species wear, so colors
+// stay as distinct as the palette allows
+function pickSpeciesColor(species: Species[]): BirdColor {
+  const counts = new Map<BirdColor, number>(
+    SPECIES_COLORS.map((color) => [color, 0])
+  );
+  for (const s of species) {
+    counts.set(s.color, (counts.get(s.color) ?? 0) + 1);
+  }
+  return SPECIES_COLORS.reduce((best, color) =>
+    (counts.get(color) ?? 0) < (counts.get(best) ?? 0) ? color : best
+  );
+}
+
+// Function to sort birds into species by genome compatibility, so new
 // topologies compete within their own niche instead of against the whole
-// population before they've had time to optimize
-function speciate(birds: Bird[]): Species[] {
-  const species: Species[] = [];
+// population before they've had time to optimize. Existing species are
+// tried first (in order), a bird that fits none founds a new species, and
+// every bird takes its species' color. Species left empty are dropped.
+export function speciate(birds: Bird[], species: Species[]): Species[] {
+  for (const s of species) {
+    s.members = [];
+  }
   for (const bird of birds) {
-    const home = species.find(
+    let home = species.find(
       (s) =>
         compatibilityDistance(s.representative, bird.brain) <
         COMPATIBILITY_THRESHOLD
     );
-    if (home) {
-      home.members.push(bird);
-    } else {
-      species.push({ representative: bird.brain, members: [bird], score: 0 });
+    if (!home) {
+      home = {
+        id: speciesIds.next,
+        color: pickSpeciesColor(species),
+        representative: bird.brain,
+        members: [],
+        bestFitness: 0,
+        staleGenerations: 0
+      };
+      speciesIds.next += 1;
+      species.push(home);
     }
+    home.members.push(bird);
+    bird.color = home.color;
   }
-  return species;
+  return species.filter((s) => s.members.length > 0);
 }
 
 // Function to breed one offspring from a pool of parent birds
-function createChild(parents: Bird[], color: BirdColor): Bird {
+function createChild(parents: Bird[]): Bird {
   const partnerA = getRandomItem(parents);
   let brain: Genome;
   if (Math.random() < CROSSOVER_RATE) {
@@ -54,66 +88,79 @@ function createChild(parents: Bird[], color: BirdColor): Bird {
     brain = createCopy(partnerA.brain);
   }
   mutateGenome(brain);
-  return createBird({ brain, color });
+  return createBird({ brain });
 }
 
-// Cycle species through the available colors so speciation is
-// visible during training
-const SPECIES_COLORS: BirdColor[] = Object.values(BirdColor);
-
-function getSpeciesColor(index: number): BirdColor {
-  return SPECIES_COLORS[index % SPECIES_COLORS.length];
-}
-
-// Function to create an initial population of birds
-export function createPopulation(): Bird[] {
+// Function to create an initial population of birds, already speciated
+export function createPopulation(): { birds: Bird[]; species: Species[] } {
   const birds: Bird[] = [];
   for (let i = 0; i < BIRD_CREATE_LIMIT; i += 1) {
-    birds.push(createBird({ color: BirdColor.RED }));
+    birds.push(createBird({ y: getSpawnY() }));
   }
-  return birds;
+  return { birds, species: speciate(birds, []) };
 }
 
-// Function to generate the next generation of birds using NEAT:
-// speciation, fitness sharing, elitism, then crossover and mutation
-export function nextGeneration(birds: Bird[]): {
+// Updates a species' record and stagnation counter from this generation's
+// best member (members must be sorted fittest first)
+function trackProgress(s: Species): void {
+  const best = s.members[0].fitness;
+  if (best > s.bestFitness) {
+    s.bestFitness = best;
+    s.staleGenerations = 0;
+  } else {
+    s.staleGenerations += 1;
+  }
+}
+
+// Function to generate the next generation from the species of the one
+// that just finished: fitness sharing, stagnation culling, elitism, then
+// crossover and mutation. Returns the new birds and the species they were
+// sorted into.
+export function nextGeneration(species: Species[]): {
   birds: Bird[];
-  speciesCount: number;
+  species: Species[];
 } {
+  const birds = species.flatMap((s) => s.members);
   // Fitness rewards longer survival superlinearly
   for (const bird of birds) {
     bird.fitness = bird.distance ** 2;
   }
+  const ranked = [...birds].sort((a, b) => b.fitness - a.fitness);
+  const champion = ranked[0];
 
-  const species = speciate(birds);
+  for (const s of species) {
+    s.members.sort((a, b) => b.fitness - a.fitness);
+    trackProgress(s);
+  }
+
+  // Stagnant species stop reproducing, except the champion's own
+  const survivors = species.filter(
+    (s) =>
+      s.staleGenerations < SPECIES_STAGNATION_LIMIT ||
+      s.members.includes(champion)
+  );
 
   // Fitness sharing: a species is scored by its mean fitness, so large
   // species don't crowd out small ones exploring new structures
-  let totalScore = 0;
-  for (const s of species) {
-    s.members.sort((a, b) => b.fitness - a.fitness);
-    s.score =
-      s.members.reduce((sum, bird) => sum + bird.fitness, 0) / s.members.length;
-    totalScore += s.score;
-  }
+  const scores = survivors.map(
+    (s) =>
+      s.members.reduce((sum, bird) => sum + bird.fitness, 0) / s.members.length
+  );
+  const totalScore = scores.reduce((sum, score) => sum + score, 0);
 
   const newBirds: Bird[] = [];
 
   // Global elitism: the overall fittest birds always carry over unchanged,
   // even if their species is too small for per-species elitism. This makes
   // the recorded best distance monotonic - the champion can never be lost.
-  const ranked = [...birds].sort((a, b) => b.fitness - a.fitness);
   for (let i = 0; i < GLOBAL_ELITE_COUNT && i < ranked.length; i += 1) {
-    newBirds.push(
-      createBird({ brain: ranked[i].brain, color: ranked[i].color })
-    );
+    newBirds.push(createBird({ brain: ranked[i].brain, elite: true }));
   }
 
-  species.forEach((s, index) => {
-    const color = getSpeciesColor(index);
+  survivors.forEach((s, index) => {
     // Offspring quota proportional to the species' share of total score;
     // species that round down to zero die out
-    let quota = Math.round((s.score / totalScore) * BIRD_CREATE_LIMIT);
+    let quota = Math.round((scores[index] / totalScore) * BIRD_CREATE_LIMIT);
     // Only the fittest part of a species gets to reproduce
     const parents = s.members.slice(
       0,
@@ -121,11 +168,11 @@ export function nextGeneration(birds: Bird[]): {
     );
     // Elitism - big species carry their champion over unchanged
     if (s.members.length >= ELITE_SPECIES_SIZE && quota > 0) {
-      newBirds.push(createBird({ brain: s.members[0].brain, color }));
+      newBirds.push(createBird({ brain: s.members[0].brain }));
       quota -= 1;
     }
     for (let i = 0; i < quota; i += 1) {
-      newBirds.push(createChild(parents, color));
+      newBirds.push(createChild(parents));
     }
   });
 
@@ -133,13 +180,14 @@ export function nextGeneration(birds: Bird[]): {
   while (newBirds.length > BIRD_CREATE_LIMIT) {
     newBirds.pop();
   }
-  const best = birds.reduce(
-    (a, b) => (b.fitness > a.fitness ? b : a),
-    birds[0]
-  );
   while (newBirds.length < BIRD_CREATE_LIMIT) {
-    newBirds.push(createChild([best], best.color));
+    newBirds.push(createChild([champion]));
   }
 
-  return { birds: newBirds, speciesCount: species.length };
+  // As in the NEAT paper, each species is represented next generation by a
+  // random member of this one, so a species drifts along with its members
+  for (const s of survivors) {
+    s.representative = getRandomItem(s.members).brain;
+  }
+  return { birds: newBirds, species: speciate(newBirds, survivors) };
 }

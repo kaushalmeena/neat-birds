@@ -1,39 +1,29 @@
-import { CANVAS_WIDTH } from "../constants/app";
 import {
-  LOWER_PIPE_MAX_Y_POS,
-  LOWER_PIPE_MIN_Y_POS,
   PIPE_COLOR_COUNT,
   PIPE_CREATE_LIMIT,
+  PIPE_GAP,
+  PIPE_GAP_MAX_Y,
+  PIPE_GAP_MIN_Y,
   PIPE_HEIGHT,
-  PIPE_MAX_X_POS,
-  PIPE_MIN_X_POS,
+  PIPE_MAX_GAP_SHIFT,
   PIPE_SPEED,
-  PipeType,
-  PIPE_WIDTH,
-  UPPER_PIPE_MAX_Y_POS,
-  UPPER_PIPE_MIN_Y_POS
+  PIPE_WIDTH
 } from "../constants/pipe";
-import type { Pipe } from "../types";
+import type { Pipe, Sprite } from "../types";
 import { context } from "./canvas";
-import { getRandomInteger, getRandomItem } from "./helper";
+import { getRandomInteger } from "./helper";
 import { pipeSprites } from "./sprites";
 
-interface CreatePipeOptions {
-  x?: number;
-  y?: number;
-  type?: PipeType;
-}
-
-// Function to create a pipe object with specified or random properties
-export function createPipe({ x, y, type }: CreatePipeOptions = {}): Pipe {
+// Function to create an inactive pipe pair
+export function createPipe(): Pipe {
   return {
-    // Type of pipe (default to random type)
-    type: type ?? getRandomItem([PipeType.UPPER, PipeType.LOWER]),
-    // Coordinates of pipe (default to origin)
-    x: x ?? 0,
-    y: y ?? 0,
+    x: 0,
+    // y of the gap's top edge; the gap's bottom edge is gapY + PIPE_GAP
+    gapY: 0,
     // Color variant of pipe (randomized on activation)
     colorIndex: 0,
+    // Whether the pair has been counted towards the score
+    passed: false,
     // Make pipe initially inactive for drawing
     active: false
   };
@@ -48,25 +38,31 @@ export function createPipes(): Pipe[] {
   return pipes;
 }
 
-// Function to make a pipe active by updating its properties
-export function makePipeActive(pipe: Pipe, xPos?: number): void {
-  pipe.type = getRandomItem([PipeType.UPPER, PipeType.LOWER]);
-  pipe.colorIndex = getRandomInteger(0, PIPE_COLOR_COUNT - 1);
-  pipe.x =
-    xPos ?? CANVAS_WIDTH + getRandomInteger(PIPE_MIN_X_POS, PIPE_MAX_X_POS);
-  // Set y position of the pipe based on type
-  if (pipe.type === PipeType.LOWER) {
-    pipe.y = getRandomInteger(LOWER_PIPE_MIN_Y_POS, LOWER_PIPE_MAX_Y_POS);
-  } else {
-    pipe.y = getRandomInteger(UPPER_PIPE_MIN_Y_POS, UPPER_PIPE_MAX_Y_POS);
+// Function to place a pipe pair at x with a random gap. When the previous
+// pair's gap is given, the new gap stays within PIPE_MAX_GAP_SHIFT of it.
+export function makePipeActive(
+  pipe: Pipe,
+  x: number,
+  previousGapY?: number
+): void {
+  let minY = PIPE_GAP_MIN_Y;
+  let maxY = PIPE_GAP_MAX_Y;
+  if (previousGapY !== undefined) {
+    minY = Math.max(minY, previousGapY - PIPE_MAX_GAP_SHIFT);
+    maxY = Math.min(maxY, previousGapY + PIPE_MAX_GAP_SHIFT);
   }
+  pipe.x = x;
+  pipe.gapY = getRandomInteger(minY, maxY);
+  pipe.colorIndex = getRandomInteger(0, PIPE_COLOR_COUNT - 1);
+  pipe.passed = false;
   pipe.active = true;
 }
 
 // Function to make a pipe inactive by resetting its properties
 export function makePipeInactive(pipe: Pipe): void {
   pipe.x = 0;
-  pipe.y = 0;
+  pipe.gapY = 0;
+  pipe.passed = false;
   pipe.active = false;
 }
 
@@ -75,38 +71,40 @@ export function updatePipe(pipe: Pipe, speed: number = PIPE_SPEED): void {
   pipe.x -= speed;
 }
 
-// Function to draw a pipe on the canvas. The sheet stores one pipe per
-// color with the cap at the top, so upper pipes are drawn rotated 180
-// degrees to point their cap down at the gap.
+// The upper pipe's rectangle sits right above the gap
+export function getUpperPipeY(pipe: Pipe): number {
+  return pipe.gapY - PIPE_HEIGHT;
+}
+
+// The lower pipe's rectangle starts right below the gap
+export function getLowerPipeY(pipe: Pipe): number {
+  return pipe.gapY + PIPE_GAP;
+}
+
+function drawPipeSprite(sprite: Sprite, x: number, y: number): void {
+  context.drawImage(
+    sprite.image,
+    sprite.sx,
+    sprite.sy,
+    sprite.sWidth,
+    sprite.sHeight,
+    x,
+    y,
+    PIPE_WIDTH,
+    PIPE_HEIGHT
+  );
+}
+
+// Function to draw a pipe pair on the canvas. The sheet stores one pipe per
+// color with the cap at the top, so the upper pipe is drawn rotated 180
+// degrees to point its cap down at the gap.
 export function drawPipe(pipe: Pipe): void {
   const sprite = pipeSprites[pipe.colorIndex] ?? pipeSprites[0];
-  if (pipe.type === PipeType.UPPER) {
-    context.save();
-    context.translate(pipe.x + PIPE_WIDTH / 2, pipe.y + PIPE_HEIGHT / 2);
-    context.rotate(Math.PI);
-    context.drawImage(
-      sprite.image,
-      sprite.sx,
-      sprite.sy,
-      sprite.sWidth,
-      sprite.sHeight,
-      -PIPE_WIDTH / 2,
-      -PIPE_HEIGHT / 2,
-      PIPE_WIDTH,
-      PIPE_HEIGHT
-    );
-    context.restore();
-  } else {
-    context.drawImage(
-      sprite.image,
-      sprite.sx,
-      sprite.sy,
-      sprite.sWidth,
-      sprite.sHeight,
-      pipe.x,
-      pipe.y,
-      PIPE_WIDTH,
-      PIPE_HEIGHT
-    );
-  }
+  const upperY = getUpperPipeY(pipe);
+  context.save();
+  context.translate(pipe.x + PIPE_WIDTH / 2, upperY + PIPE_HEIGHT / 2);
+  context.rotate(Math.PI);
+  drawPipeSprite(sprite, -PIPE_WIDTH / 2, -PIPE_HEIGHT / 2);
+  context.restore();
+  drawPipeSprite(sprite, pipe.x, getLowerPipeY(pipe));
 }

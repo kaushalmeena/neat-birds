@@ -1,5 +1,22 @@
-// Network inputs/outputs (a bias node is added automatically)
-export const INPUT_COUNT = 5;
+// Network inputs, by index (the index is also the input node's id). Each is
+// something the bird senses about itself or the next pipe pair, scaled to
+// roughly -1..1 by think() in utils/bird.ts. Changing these changes what a
+// trained brain means, so bump SAVE_FILE_VERSION too.
+export const Input = {
+  // Height of the bird within the playfield
+  BIRD_Y: 0,
+  // Vertical velocity (negative while rising)
+  BIRD_DY: 1,
+  // Horizontal distance to the next pipe pair's leading edge
+  PIPE_DX: 2,
+  // Distance from the gap's top edge down to the bird's top
+  GAP_TOP: 3,
+  // Distance from the bird's bottom down to the gap's bottom edge
+  GAP_LOW: 4
+} as const;
+
+// A bias node is added on top of these automatically
+export const INPUT_COUNT = Object.keys(Input).length;
 export const OUTPUT_COUNT = 1;
 
 // Chance that each connection weight is mutated at all
@@ -32,3 +49,9 @@ export const ELITE_SPECIES_SIZE = 5;
 // The overall fittest birds always survive unchanged, regardless of
 // their species size, so the champion is never lost to unlucky breeding
 export const GLOBAL_ELITE_COUNT = 1;
+
+// A species whose best fitness hasn't improved for this many generations
+// stops reproducing, freeing its offspring quota for species that are
+// still making progress. The species holding the overall champion is
+// always spared.
+export const SPECIES_STAGNATION_LIMIT = 15;

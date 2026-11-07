@@ -2,31 +2,48 @@ import {
   BACKGROUND_FADE_OPACITY,
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
-  EXIT_X_POS,
   GROUND_HEIGHT,
   Mode,
-  Screen
+  Screen,
+  TRAINING_MAX_SCORE,
+  TURBO_BUDGET_MS,
+  TURBO_SPEED
 } from "../constants/app";
-import { BIRD_CREATE_LIMIT } from "../constants/bird";
+import {
+  BIRD_CREATE_LIMIT,
+  BIRD_HEIGHT,
+  BIRD_START_X,
+  BIRD_WIDTH
+} from "../constants/bird";
 import {
   PIPE_ACTIVE_LIMIT,
+  PIPE_EXIT_X,
   PIPE_MAX_DISTANCE,
   PIPE_MAX_SPEED,
   PIPE_MIN_DISTANCE,
+  PIPE_SPAWN_X,
   PIPE_SPEED,
-  PIPE_SPEED_RAMP
+  PIPE_SPEED_RAMP,
+  PIPE_WIDTH
 } from "../constants/pipe";
-import { resetState, setBestScore, state } from "../state";
+import { resetState, setBestScore, setChampion, state } from "../state";
+import type { Bird, Pipe } from "../types";
 import { drawBird, isBirdDead, think, updateBird } from "../utils/bird";
 import { context, drawText } from "../utils/canvas";
 import { nextGeneration } from "../utils/ga";
 import { createCopy, getRandomInteger } from "../utils/helper";
+import { drawItems, getMainItems } from "../utils/menu";
 import { drawPipe, makePipeActive, updatePipe } from "../utils/pipe";
 import { playDeathSound, playScoreSound } from "../utils/sound";
 import { backgroundImages, groundSprite } from "../utils/sprites";
 
 // How many generations the fitness chart keeps
 const CHART_MAX_POINTS = 60;
+
+// Opacity of each training bird
+const FLOCK_OPACITY = 0.6;
+// Radius of the ring marking the elite bird
+const ELITE_RING_RADIUS = 19;
 
 // Scroll offsets for the ground and background patterns (purely visual)
 const scrollOffsets = {
@@ -51,33 +68,46 @@ function getPipeSpeed(): number {
 
 // --- Simulation (no drawing) ---------------------------------------------
 
-// Advances every active pipe, spawns new ones, and counts passed pipes
+// Advances every active pipe, scores pairs the birds have flown past,
+// recycles pairs that left the screen, and spawns new ones
 function updatePipes(speed: number): void {
   let activeCount = 0;
-  let farthestPosX = 0;
-  for (let i = 0; i < state.current.pipes.length; i += 1) {
-    const pipe = state.current.pipes[i];
-    if (pipe.active) {
-      activeCount += 1;
-      farthestPosX = Math.max(farthestPosX, pipe.x);
-      updatePipe(pipe, speed);
-      // Mark pipe inactive once it has scrolled off screen and count it passed
-      if (pipe.x < EXIT_X_POS) {
-        pipe.active = false;
-        state.current.score += 1;
-        // Chime in standard and autoplay mode; training would be a noise wall
-        if (state.current.mode !== Mode.TRAINING) {
-          playScoreSound();
-        }
+  let farthest: Pipe | null = null;
+  for (const pipe of state.current.pipes) {
+    if (!pipe.active) {
+      continue;
+    }
+    updatePipe(pipe, speed);
+    // Score as soon as the pair's trailing edge passes the birds
+    if (!pipe.passed && pipe.x + PIPE_WIDTH < BIRD_START_X) {
+      pipe.passed = true;
+      state.current.score += 1;
+      // Chime in standard and autoplay mode; training would be a noise wall
+      if (state.current.mode !== Mode.TRAINING) {
+        playScoreSound();
       }
+    }
+    if (pipe.x < PIPE_EXIT_X) {
+      pipe.active = false;
+      continue;
+    }
+    activeCount += 1;
+    if (!farthest || pipe.x > farthest.x) {
+      farthest = pipe;
     }
   }
   if (activeCount < PIPE_ACTIVE_LIMIT) {
-    const pipeIndex = state.current.pipes.findIndex((pipe) => !pipe.active);
-    if (pipeIndex > -1) {
-      const newPosX =
-        farthestPosX + getRandomInteger(PIPE_MIN_DISTANCE, PIPE_MAX_DISTANCE);
-      makePipeActive(state.current.pipes[pipeIndex], newPosX);
+    const pipe = state.current.pipes.find((p) => !p.active);
+    if (pipe) {
+      // Chain each new pair after the farthest one, keeping its gap within
+      // reach; the first pair of a run enters from the right edge
+      if (farthest) {
+        const x =
+          farthest.x + getRandomInteger(PIPE_MIN_DISTANCE, PIPE_MAX_DISTANCE);
+        makePipeActive(pipe, x, farthest.gapY);
+      } else {
+        makePipeActive(pipe, PIPE_SPAWN_X);
+      }
     }
   }
 }
@@ -115,8 +145,7 @@ function breedNextGeneration(): void {
     const champion = state.current.deadBirds.reduce((a, b) =>
       b.distance > a.distance ? b : a
     );
-    state.current.bestBirdBrain = createCopy(champion.brain);
-    state.current.bestBirdColor = champion.color;
+    setChampion(createCopy(champion.brain), champion.color);
   }
   state.current.bestDistance = Math.max(
     generationBest,
@@ -127,9 +156,10 @@ function breedNextGeneration(): void {
   if (state.current.distanceHistory.length > CHART_MAX_POINTS) {
     state.current.distanceHistory.shift();
   }
-  const { birds, speciesCount } = nextGeneration(state.current.deadBirds);
+  // Every bird of the finished generation is a member of some species
+  const { birds, species } = nextGeneration(state.current.species);
   state.current.liveBirds = birds;
-  state.current.speciesCount = speciesCount;
+  state.current.species = species;
   state.current.deadBirds = [];
   resetState();
 }
@@ -143,6 +173,12 @@ function updateLiveBirds(): void {
     if (isBirdDead(bird, state.current.pipes)) {
       state.current.deadBirds.push(...state.current.liveBirds.splice(i, 1));
     }
+  }
+  // A generation that reaches the score cap is done: end it so evolution
+  // keeps going instead of watching a perfect bird forever
+  if (state.current.score >= TRAINING_MAX_SCORE) {
+    state.current.deadBirds.push(...state.current.liveBirds);
+    state.current.liveBirds = [];
   }
   // When all birds are dead breed the next generation from the dead ones
   if (state.current.liveBirds.length === 0) {
@@ -216,25 +252,38 @@ function drawGround(advance: number): void {
   }
 }
 
+// Training birds are drawn translucent, so where the flock overlaps reads
+// as density instead of one solid blob. The elite (last generation's
+// champion) is drawn last, solid and ringed, so you can follow it.
 function drawLiveBirds(): void {
-  for (let i = 0; i < state.current.liveBirds.length; i += 1) {
-    drawBird(state.current.liveBirds[i]);
+  let elite: Bird | null = null;
+  context.globalAlpha = FLOCK_OPACITY;
+  for (const bird of state.current.liveBirds) {
+    if (bird.elite) {
+      elite = bird;
+    } else {
+      drawBird(bird);
+    }
   }
-}
-
-function drawPauseButton(): void {
-  drawText("PAUSE", 420, 10, { color: "#f7dc6f" });
+  context.globalAlpha = 1;
+  if (elite) {
+    drawBird(elite);
+    context.strokeStyle = "white";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(
+      elite.x + BIRD_WIDTH / 2,
+      elite.y + BIRD_HEIGHT / 2,
+      ELITE_RING_RADIUS,
+      0,
+      Math.PI * 2
+    );
+    context.stroke();
+  }
 }
 
 function drawScoreText(): void {
   drawText(`SCORE:${state.current.score}`, 10, 10);
-}
-
-// Clickable speed toggle shown just below the training panel / fitness chart
-function drawSpeedButton(): void {
-  drawText(`SPEED:${state.current.trainingSpeed}x`, 320, 162, {
-    color: "#f7dc6f"
-  });
 }
 
 // HUD panel in the top-right corner below the pause button, holding the
@@ -252,7 +301,7 @@ function drawTrainingPanel(): void {
     ["BEST-DIST", state.current.bestDistance],
     ["GENERATION", state.current.generation],
     ["ALIVE", `${state.current.liveBirds.length}/${BIRD_CREATE_LIMIT}`],
-    ["SPECIES", state.current.speciesCount]
+    ["SPECIES", state.current.species.length]
   ];
   lines.forEach(([label, value], index) => {
     drawText(
@@ -298,34 +347,44 @@ function drawTrainingPanel(): void {
   context.stroke();
 }
 
-function drawMainScreen(): void {
-  const speed = getPipeSpeed();
-  // Training fast-forwards by running several simulation ticks per frame;
-  // other modes always run exactly one tick
-  const steps =
-    state.current.mode === Mode.TRAINING ? state.current.trainingSpeed : 1;
-  for (let step = 0; step < steps; step += 1) {
+// Runs the simulation for this frame and returns how many ticks ran.
+// `ticks` is how many real-time ticks elapsed since the last frame; training
+// multiplies it by the speed setting, or in turbo runs as many ticks as fit
+// in a fixed time budget.
+function runTicks(ticks: number, speed: number): number {
+  const { mode, trainingSpeed } = state.current;
+  const isTraining = mode === Mode.TRAINING;
+  const isTurbo = isTraining && trainingSpeed === TURBO_SPEED;
+  const deadline = performance.now() + TURBO_BUDGET_MS;
+  const target = isTraining && !isTurbo ? ticks * trainingSpeed : ticks;
+  let ran = 0;
+  while (isTurbo ? performance.now() < deadline : ran < target) {
     simulate(speed);
+    ran += 1;
     // A tick may end the run (death screen) - stop simulating further
     if (state.current.activeScreen !== Screen.MAIN) {
       break;
     }
   }
+  return ran;
+}
 
+function drawMainScreen(ticks: number): void {
+  const speed = getPipeSpeed();
+  const ran = runTicks(ticks, speed);
   // Ground and backdrop scroll to match the total distance traveled
-  const advance = speed * steps;
+  const advance = speed * ran;
   drawBackground(advance);
   drawActivePipes();
   drawGround(advance);
   drawScoreText();
-  drawPauseButton();
   if (state.current.mode === Mode.TRAINING) {
     drawLiveBirds();
     drawTrainingPanel();
-    drawSpeedButton();
   } else {
     drawBird(state.current.playerBird);
   }
+  drawItems(getMainItems(state.current.mode, state.current.trainingSpeed));
 }
 
 export default drawMainScreen;

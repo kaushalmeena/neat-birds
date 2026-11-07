@@ -11,18 +11,22 @@ Each bird's `brain` is a `Genome`: a list of node genes (input, bias, hidden,
 output) and connection genes (`from`, `to`, `weight`, `enabled`,
 `innovation`).
 
-- **Inputs (5)**, normalized to roughly 0–1 by `think()` in `bird.ts`:
-  1. bird's distance from the top of the screen
-  2. bird's distance from the bottom of the screen
-  3. horizontal distance to the next pipe
-  4. vertical distance to the top edge of the gap
-  5. vertical distance to the bottom edge of the gap
+- **Inputs (5)**, named by the `Input` constant in `src/constants/neat.ts`
+  (each value is its index and input node id), scaled to roughly -1..1 by
+  `think()` in `bird.ts`:
+  - `BIRD_Y`: bird's height within the playfield
+  - `BIRD_DY`: bird's vertical velocity (`dy / BIRD_MAX_FALL_SPEED`)
+  - `PIPE_DX`: horizontal distance to the next pair's leading edge
+  - `GAP_TOP`: distance from the gap's top edge down to the bird
+  - `GAP_LOW`: distance from the bird down to the gap's bottom edge
 - **Bias**: one extra node fixed at 1.
 - **Output (1)**: the bird flaps when it is above 0.5.
 
-`feedForward()` resolves each output recursively through enabled incoming
-connections, using the steepened sigmoid `1 / (1 + e^(-4.9x))` from the
-paper. Genomes stay acyclic: `mutateAddConnection()` rejects any edge that
+`feedForward()` uses the steepened sigmoid `1 / (1 + e^(-4.9x))` from the
+paper. The first time a genome is evaluated it is compiled (topologically
+sorted, with node values in a typed array) and cached in a `WeakMap`, so
+every later call is one flat pass. This relies on genomes never being
+mutated after a bird owns them: offspring always get a fresh copy. Genomes stay acyclic: `mutateAddConnection()` rejects any edge that
 would create a cycle.
 
 ## Innovation registry
@@ -65,17 +69,33 @@ re-enabled with probability `GENE_REENABLE_RATE`.
 ```
 
 where `N` is the larger genome's connection count, or 1 when both genomes
-have fewer than 20 connections. Birds join the first species whose
-representative is within `COMPATIBILITY_THRESHOLD`; otherwise they found a
-new one. Species are colored in rotation so speciation is visible.
+have fewer than 20 connections.
+
+Species persist across generations (`state.current.species`, type `Species`
+in `src/types.ts`). `speciate(birds, species)` in `ga.ts` sorts each new bird
+into the first existing species whose representative is within
+`COMPATIBILITY_THRESHOLD`, or founds a new species. Birds are speciated as
+soon as they are born, so each bird wears its species' color while it flies.
+A new species takes the color fewest living species wear, and keeps it for
+life, so you can watch a lineage spread or die out. Species left with no
+members are dropped.
+
+Each species tracks its best-ever member fitness. If that hasn't improved
+for `SPECIES_STAGNATION_LIMIT` generations, the species stops reproducing,
+unless it holds the overall champion.
 
 ## Producing a generation
 
+A generation ends when every bird has died, or when it passes
+`TRAINING_MAX_SCORE` pipes (`src/constants/app.ts`). At that point the
+survivors count as dead too, so a perfect bird can't stall evolution.
+
 `nextGeneration()` in `ga.ts`:
 
-1. Sets `fitness = distance²` (frames survived, squared).
-2. Speciates the population.
-3. Scores each species by mean fitness (fitness sharing).
+1. Sets `fitness = distance²` (ticks survived, squared).
+2. Updates each species' best fitness and stagnation count, and drops
+   stagnant species (except the champion's).
+3. Scores each remaining species by mean fitness (fitness sharing).
 4. Copies the overall top `GLOBAL_ELITE_COUNT` birds unchanged, so the best
    distance never regresses.
 5. Gives each species offspring in proportion to its share of total score.
@@ -85,10 +105,17 @@ new one. Species are colored in rotation so speciation is visible.
    then mutates it.
 7. Trims or tops up (from the overall best bird) to exactly
    `BIRD_CREATE_LIMIT` (500).
+8. Marks the global elites with `elite: true`. Training draws an elite
+   solid with a white ring on top of the translucent flock, so you can
+   follow last generation's champion. Every training bird starts at a
+   random height up to `BIRD_SPAWN_SPREAD` below the start point.
+9. Gives each species a random member of the finished generation as its new
+   representative, as in the NEAT paper, then speciates the new birds.
 
 ## Tuning
 
 Change hyperparameters in `src/constants/neat.ts`. The population size is
-`BIRD_CREATE_LIMIT` in `src/constants/bird.ts`. Changing `INPUT_COUNT` or
-`OUTPUT_COUNT` also requires updating `think()` and makes existing save
-files incompatible (see [save-files.md](save-files.md)).
+`BIRD_CREATE_LIMIT` in `src/constants/bird.ts`. Adding or changing an
+`Input` (which sets `INPUT_COUNT`) or `OUTPUT_COUNT` also requires updating
+`think()` and makes existing save files incompatible (see
+[save-files.md](save-files.md)).

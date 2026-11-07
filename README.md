@@ -45,10 +45,13 @@ TypeScript, with zero game or machine-learning libraries.
   structural mutation, all hand-written.
 - **Training dashboard** — live best-distance, generation, population, and
   species counts, plus a best-distance-per-generation chart.
-- **Speed multiplier** — fast-forward evolution at 1x/2x/4x/8x since rendering,
-  not simulation, is the bottleneck.
-- **Portable brains** — export the champion network to a JSON file and load it
-  back later to watch it fly.
+- **Speed multiplier** — fast-forward evolution at 1x/2x/4x/8x, or MAX, which
+  simulates as many ticks as fit in each frame.
+- **Watch your best bird** — the champion is remembered between visits, so
+  autoplay flies it straight away; pause training and pick **WATCH BEST** to
+  see it now.
+- **Portable brains** — export the whole training run or just the champion to
+  a JSON file and load it back later.
 - **Retro presentation** — pixel-art sprites, multiple randomized backdrops, and
   chiptune sound effects synthesized with the Web Audio API.
 
@@ -81,12 +84,12 @@ For the details, see the [docs](docs/): [architecture](docs/architecture.md),
 
 ## Tech Stack
 
-| Area          | Tools                                                                     |
-| ------------- | ------------------------------------------------------------------------- |
-| **Language**  | [TypeScript](https://www.typescriptlang.org/) (ES modules)                |
-| **Rendering** | [HTML5 Canvas](https://developer.mozilla.org/docs/Web/API/Canvas_API)     |
-| **Audio**     | [Web Audio API](https://developer.mozilla.org/docs/Web/API/Web_Audio_API) |
-| **Tooling**   | [Vite+](https://viteplus.dev/) (Vite · Oxlint · Oxfmt)                    |
+| Area          | Tools                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Language**  | [TypeScript](https://www.typescriptlang.org/) (ES modules)                                                                      |
+| **Rendering** | [HTML5 Canvas](https://developer.mozilla.org/docs/Web/API/Canvas_API)                                                           |
+| **Audio**     | [Web Audio API](https://developer.mozilla.org/docs/Web/API/Web_Audio_API)                                                       |
+| **Tooling**   | [Vite](https://vite.dev/), [Oxlint](https://oxc.rs/docs/guide/usage/linter), [Oxfmt](https://oxc.rs/docs/guide/usage/formatter) |
 
 ## Getting Started
 

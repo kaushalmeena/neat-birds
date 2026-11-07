@@ -1,25 +1,28 @@
 import { Mode, Screen } from "../constants/app";
 import { BirdColor } from "../constants/bird";
-import type { Bird, GameState, Pipe } from "../types";
-import { createBird, resetBird } from "../utils/bird";
-import { createPopulation } from "../utils/ga";
+import type { Bird, GameState, Pipe, Species } from "../types";
+import { createBird, getSpawnY, resetBird } from "../utils/bird";
+import { createPopulation, speciate, syncSpeciesIds } from "../utils/ga";
 import { getRandomInteger } from "../utils/helper";
+import type { Genome } from "../utils/neat";
 import { syncGenomeCounters } from "../utils/neat";
 import { createPipes, makePipeInactive } from "../utils/pipe";
 import { backgroundImages } from "../utils/sprites";
+import { showToast } from "../utils/toast";
 
 // Version stamp for exported checkpoint files. A checkpoint captures the
 // entire live simulation - every bird (position, velocity, alive/dead,
 // fitness) and pipe - so training resumes from the exact same moment, plus
 // the champion genome so autoplay can replay the best bird from the file.
-const SAVE_FILE_VERSION = 3;
+// Only files with exactly this version load; there is no migration.
+const SAVE_FILE_VERSION = 1;
 
 const VALID_COLORS: BirdColor[] = Object.values(BirdColor);
 const sanitizeColor = (color: unknown): BirdColor | null =>
   VALID_COLORS.includes(color as BirdColor) ? (color as BirdColor) : null;
 
-// Only the fields that define a bird's state; the transient wing-flap timer
-// is intentionally left out (it would be a stale handle after reload).
+// Only the fields that define a bird's state; the few-tick wing-flap
+// animation counter is left out (the wing just settles on the next tick).
 function serializeBird(bird: Bird) {
   return {
     x: bird.x,
@@ -29,6 +32,7 @@ function serializeBird(bird: Bird) {
     wing: bird.wing,
     distance: bird.distance,
     fitness: bird.fitness,
+    elite: bird.elite,
     brain: bird.brain
   };
 }
@@ -42,29 +46,52 @@ function reviveBird(data: ReturnType<typeof serializeBird>): Bird {
     dy: data.dy,
     color: data.color,
     wing: data.wing,
-    brain: data.brain
+    brain: data.brain,
+    elite: Boolean(data.elite)
   });
   bird.distance = data.distance ?? 0;
   bird.fitness = data.fitness ?? 0;
   return bird;
 }
 
+// A species without its members; birds are re-sorted into species on load
+function serializeSpecies(species: Species) {
+  return {
+    id: species.id,
+    color: species.color,
+    representative: species.representative,
+    bestFitness: species.bestFitness,
+    staleGenerations: species.staleGenerations
+  };
+}
+
+function reviveSpecies(data: ReturnType<typeof serializeSpecies>): Species {
+  return {
+    id: data.id,
+    color: sanitizeColor(data.color) ?? BirdColor.GREEN,
+    representative: data.representative,
+    members: [],
+    bestFitness: data.bestFitness ?? 0,
+    staleGenerations: data.staleGenerations ?? 0
+  };
+}
+
 function serializePipe(pipe: Pipe) {
   return {
-    type: pipe.type,
     x: pipe.x,
-    y: pipe.y,
+    gapY: pipe.gapY,
     colorIndex: pipe.colorIndex,
+    passed: pipe.passed,
     active: pipe.active
   };
 }
 
 function revivePipe(data: ReturnType<typeof serializePipe>): Pipe {
   return {
-    type: data.type,
     x: data.x,
-    y: data.y,
+    gapY: data.gapY,
     colorIndex: data.colorIndex ?? 0,
+    passed: Boolean(data.passed),
     active: Boolean(data.active)
   };
 }
@@ -117,6 +144,40 @@ export function getBestScore(): number {
   return Number(localStorage.getItem("bestScore")) || 0;
 }
 
+// The latest champion is remembered in localStorage, so autoplay can fly
+// your best trained bird without a file, even after a reload
+const CHAMPION_KEY = "champion";
+
+interface StoredChampion {
+  brain: Genome;
+  color: BirdColor | null;
+}
+
+// A stored brain is trusted only if it has the current save version and
+// the basic genome shape
+function readStoredChampion(): StoredChampion | null {
+  try {
+    const data = JSON.parse(localStorage.getItem(CHAMPION_KEY) ?? "null");
+    if (
+      data?.version === SAVE_FILE_VERSION &&
+      Array.isArray(data.brain?.nodes) &&
+      Array.isArray(data.brain?.connections)
+    ) {
+      return { brain: data.brain, color: sanitizeColor(data.color) };
+    }
+  } catch {
+    // Unreadable storage just means there is no remembered champion
+  }
+  return null;
+}
+
+const storedChampion = readStoredChampion();
+if (storedChampion) {
+  syncGenomeCounters([storedChampion.brain]);
+}
+
+const population = createPopulation();
+
 export const state: { current: GameState } = {
   current: {
     score: 0,
@@ -125,11 +186,12 @@ export const state: { current: GameState } = {
     bestDistance: 0,
     // The champion genome seen so far in training; playable in autoplay
     // mode, along with the color the champion bird wore
-    bestBirdBrain: null,
-    bestBirdColor: null,
+    bestBirdBrain: storedChampion?.brain ?? null,
+    bestBirdColor: storedChampion?.color ?? null,
     // Best distance per generation, for the training fitness chart
     distanceHistory: [],
-    speciesCount: 1,
+    // Persistent species of the training population
+    species: population.species,
     // Simulation steps per frame in training mode (fast-forward)
     trainingSpeed: 1,
     mode: Mode.STANDARD,
@@ -137,7 +199,7 @@ export const state: { current: GameState } = {
     // Which backdrop is in use; re-rolled when a game starts
     backgroundIndex: getRandomInteger(0, backgroundImages.length - 1),
     playerBird: createBird(),
-    liveBirds: createPopulation(),
+    liveBirds: population.birds,
     deadBirds: [],
     pipes: createPipes()
   }
@@ -148,11 +210,30 @@ export function setBestScore(score: number): void {
   localStorage.setItem("bestScore", String(score));
 }
 
+// Records a new champion and remembers it for later sessions
+export function setChampion(brain: Genome, color: BirdColor | null): void {
+  state.current.bestBirdBrain = brain;
+  state.current.bestBirdColor = color;
+  try {
+    localStorage.setItem(
+      CHAMPION_KEY,
+      JSON.stringify({ version: SAVE_FILE_VERSION, brain, color })
+    );
+  } catch {
+    // Storage may be full or blocked; the champion still lives in memory
+  }
+}
+
 export function resetState(): void {
   state.current.score = 0;
   resetBird(state.current.playerBird);
-  // Reset any birds still alive (e.g. when quitting training mid-generation)
-  state.current.liveBirds.forEach(resetBird);
+  // Leaving training mid-generation restarts that generation: birds that
+  // already died rejoin the flock, and everyone goes back to the start
+  state.current.liveBirds.push(...state.current.deadBirds);
+  state.current.deadBirds = [];
+  for (const bird of state.current.liveBirds) {
+    resetBird(bird, getSpawnY());
+  }
   state.current.pipes.forEach(makePipeInactive);
 }
 
@@ -161,7 +242,7 @@ export function resetState(): void {
 export function saveStateToFile(): void {
   const population = [...state.current.liveBirds, ...state.current.deadBirds];
   if (population.length === 0) {
-    alert("Nothing to save yet - start training first!");
+    showToast("Nothing to save yet");
     return;
   }
   // Prefer the recorded champion; otherwise fall back to the farthest bird
@@ -180,7 +261,7 @@ export function saveStateToFile(): void {
     score: state.current.score,
     generation: state.current.generation,
     bestDistance: state.current.bestDistance,
-    speciesCount: state.current.speciesCount,
+    species: state.current.species.map(serializeSpecies),
     distanceHistory: state.current.distanceHistory,
     trainingSpeed: state.current.trainingSpeed,
     backgroundIndex: state.current.backgroundIndex,
@@ -191,6 +272,7 @@ export function saveStateToFile(): void {
     deadBirds: state.current.deadBirds.map(serializeBird),
     pipes: state.current.pipes.map(serializePipe)
   });
+  showToast("State file saved");
 }
 
 // A full training checkpoint has the live simulation arrays
@@ -199,6 +281,7 @@ function isTrainingCheckpoint(payload: any): boolean {
   return (
     payload &&
     payload.version === SAVE_FILE_VERSION &&
+    Array.isArray(payload.species) &&
     Array.isArray(payload.liveBirds) &&
     Array.isArray(payload.deadBirds) &&
     Array.isArray(payload.pipes) &&
@@ -216,13 +299,12 @@ export async function loadStateForTraining(
     return;
   }
   if (!isTrainingCheckpoint(payload)) {
-    alert("That file is not a valid training state!");
+    showToast("Not a valid training state file");
     return;
   }
   state.current.score = payload.score ?? 0;
   state.current.generation = payload.generation ?? 1;
   state.current.bestDistance = payload.bestDistance ?? 0;
-  state.current.speciesCount = payload.speciesCount ?? 1;
   state.current.distanceHistory = Array.isArray(payload.distanceHistory)
     ? payload.distanceHistory
     : [];
@@ -232,18 +314,28 @@ export async function loadStateForTraining(
   if (typeof payload.backgroundIndex === "number") {
     state.current.backgroundIndex = payload.backgroundIndex;
   }
-  state.current.bestBirdBrain = payload.bestBirdBrain ?? null;
-  state.current.bestBirdColor = sanitizeColor(payload.bestBirdColor);
+  if (payload.bestBirdBrain) {
+    setChampion(payload.bestBirdBrain, sanitizeColor(payload.bestBirdColor));
+  }
   state.current.liveBirds = payload.liveBirds.map(reviveBird);
   state.current.deadBirds = payload.deadBirds.map(reviveBird);
   state.current.pipes = payload.pipes.map(revivePipe);
-  // Keep NEAT counters ahead of every loaded genome
-  syncGenomeCounters(
-    [...state.current.liveBirds, ...state.current.deadBirds].map(
-      (bird) => bird.brain
-    )
+  // Re-sort the birds into the saved species
+  const species: Species[] = payload.species.map(reviveSpecies);
+  syncSpeciesIds(species);
+  state.current.species = speciate(
+    [...state.current.liveBirds, ...state.current.deadBirds],
+    species
   );
+  // Keep NEAT counters ahead of every loaded genome
+  syncGenomeCounters([
+    ...[...state.current.liveBirds, ...state.current.deadBirds].map(
+      (bird) => bird.brain
+    ),
+    ...state.current.species.map((s) => s.representative)
+  ]);
   // Note: no resetState() - the whole point is to resume exactly as saved
+  showToast(`Resumed at generation ${state.current.generation}`);
   onLoaded?.();
 }
 
@@ -261,15 +353,15 @@ export async function loadBrainForAutoplay(
     payload.version !== SAVE_FILE_VERSION ||
     !payload.bestBirdBrain
   ) {
-    alert("That file has no playable brain!");
+    showToast("That file has no playable brain");
     return;
   }
-  state.current.bestBirdBrain = payload.bestBirdBrain;
-  state.current.bestBirdColor = sanitizeColor(payload.bestBirdColor);
+  setChampion(payload.bestBirdBrain, sanitizeColor(payload.bestBirdColor));
   state.current.bestDistance = Math.max(
     state.current.bestDistance,
     payload.bestDistance ?? 0
   );
   syncGenomeCounters([payload.bestBirdBrain]);
+  showToast("Brain loaded");
   onLoaded?.();
 }

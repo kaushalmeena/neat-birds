@@ -13,27 +13,32 @@ screen is active.
 | `src/screens/*.ts`     | One `draw*Screen()` per `Screen`; `main.ts` also runs the simulation              |
 | `src/utils/app.ts`     | `performAction()`: the single dispatcher for every `Action`                       |
 | `src/utils/bird.ts`    | Bird physics, collision, drawing, and `think()` (network inputs → flap)           |
-| `src/utils/pipe.ts`    | Pipe pool: create, activate/deactivate, move, draw                                |
+| `src/utils/pipe.ts`    | Pipe-pair pool: create, activate/deactivate, move, draw                           |
 | `src/utils/neat.ts`    | Genome encoding, innovation registry, feed-forward, mutation, crossover, distance |
 | `src/utils/ga.ts`      | Population: speciation, fitness sharing, elitism, breeding the next generation    |
 | `src/utils/sprites.ts` | Spritesheet regions for birds, pipes, ground; background images                   |
 | `src/utils/sound.ts`   | Chiptune effects synthesized with the Web Audio API                               |
-| `src/utils/menu.ts`    | Pause-menu items (shared by drawing and hit-testing)                              |
+| `src/utils/menu.ts`    | Every clickable label per screen, shared by drawing and hit-testing               |
+| `src/utils/toast.ts`   | Short in-canvas messages (`showToast()`), used instead of `alert()`               |
 | `src/utils/canvas.ts`  | The canvas element, its 2D context, and `drawText()`                              |
 | `src/utils/helper.ts`  | Small math/random/geometry helpers and `createCopy()` (deep clone)                |
 | `src/constants/*.ts`   | Tunables and enums, grouped by domain (`app`, `bird`, `pipe`, `neat`)             |
-| `src/types.ts`         | Shared interfaces: `Bird`, `Pipe`, `GameState`, `Sprite`, `PauseMenuItem`         |
+| `src/types.ts`         | Shared interfaces: `Bird`, `Pipe`, `GameState`, `Sprite`, `MenuItem`              |
 
 ## Game loop
 
-`main.ts` calls `animate()`, which schedules `requestAnimationFrame` behind a
-`setTimeout(FRAME_DELAY)` and calls `draw()`. `draw()` switches on
+`main.ts` runs a fixed-timestep loop on `requestAnimationFrame`. Elapsed
+time accumulates (capped at `MAX_FRAME_CATCHUP_MS`) and is spent in whole
+`TICK_MS` (1/60 s) ticks, so the game runs at the same speed on any refresh
+rate. All physics constants are per tick. `draw(ticks)` switches on
 `state.current.activeScreen` and calls the matching screen function.
 
-Only the main screen does simulation. Each frame `drawMainScreen()`:
+Only the main screen does simulation. Each frame `drawMainScreen(ticks)`:
 
-1. Runs `simulate()` once, or `trainingSpeed` times in training mode
-   (the 1x/2x/4x/8x fast-forward). It stops early if a tick ends the run.
+1. Runs `simulate()` `ticks` times, or `ticks × trainingSpeed` times in
+   training mode (1x/2x/4x/8x). At `MAX` (`TURBO_SPEED`) it instead runs as
+   many ticks as fit in `TURBO_BUDGET_MS`. It stops early if a tick ends the
+   run.
 2. Draws background, pipes, ground, HUD, and birds.
 
 `simulate()` advances the pipes, then updates birds according to the mode:
@@ -42,7 +47,8 @@ Only the main screen does simulation. Each frame `drawMainScreen()`:
   screen and may record a new best score in `localStorage`.
 - **Autoplay**: the player bird runs a loaded champion genome via `think()`.
 - **Training**: every live bird runs `think()`; dead birds move to
-  `deadBirds`. When none are left, `breedNextGeneration()` records stats,
+  `deadBirds`. Reaching `TRAINING_MAX_SCORE` ends the generation. When none
+  are left, `breedNextGeneration()` records stats,
   keeps the champion brain, and calls `nextGeneration()` from `ga.ts`.
 
 Pipe speed ramps with score in standard mode only. Training and autoplay use
@@ -56,12 +62,36 @@ change triggered by the user goes through `performAction(Action)` in
 
 Input handlers in `main.ts` map keys and taps to actions:
 
-- Keyboard (main screen only): `Space` flaps, `Escape` pauses, `↑`/`↓` cycle
-  training speed.
-- Click and touch: coordinates are scaled to the 500×400 logical canvas,
-  then hit-tested against hard-coded rectangles per screen. These rectangles
-  must match where the screen draws its labels. The pause menu avoids the
-  duplication by hit-testing `getPauseMenuItems()`, the same list it draws.
+- Keyboard (`KEY_ACTIONS`, on key press, ignoring auto-repeat):
+  - Title: `↑`/`↓` change mode, `Enter`/`Space` start.
+  - Main: `Space` flaps, `Esc`/`P` pause, `↑`/`↓` cycle training speed.
+  - Pause: `Esc`/`P` resume.
+  - Death: `Enter` restarts and `Esc` quits. `Space` is left out, so
+    mashing flap through a crash can't skip the death screen.
+- Pointer: positions are scaled to the 500×400 logical canvas and
+  hit-tested against `getScreenItems()`, the same `MenuItem` lists the
+  screens draw (`src/utils/menu.ts`). Buttons act on `click`, which counts
+  as a user gesture on every device, as the file picker and audio require.
+  Flapping acts on `pointerdown` so it doesn't wait for the release.
+
+The game pauses itself when the tab is hidden (`visibilitychange`), since
+the loop stops while hidden anyway.
+
+## Champion and autoplay
+
+Whenever training sets a new best distance, `setChampion()` stores that
+brain in `localStorage` (key `champion`, stamped with `SAVE_FILE_VERSION`)
+as well as in `state.current.bestBirdBrain`. On startup the stored champion
+is loaded back, so:
+
+- Autoplay's START flies the remembered champion right away, and opens the
+  file picker only when there is none. Its pause menu has `LOAD BRAIN` to
+  swap in a file.
+- Training's pause menu has `WATCH BEST`, which switches to autoplay with
+  the current champion.
+
+Leaving training mid-generation (quit, or watch best) restarts that
+generation: `resetState()` returns the dead birds to the flock.
 
 ## State
 
