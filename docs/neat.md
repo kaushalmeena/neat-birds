@@ -14,12 +14,11 @@ output) and connection genes (`from`, `to`, `weight`, `enabled`,
 - **Inputs (5)**, named by the `Input` constant in `src/constants/neat.ts`
   (each value is its index and input node id), scaled to roughly -1..1 by
   `think()` in `bird.ts`:
-  - `HEIGHT`: bird's height within the playfield
-  - `VELOCITY`: bird's vertical velocity (`dy / BIRD_MAX_FALL_SPEED`)
-  - `PIPE_DISTANCE`: horizontal distance to the next pair's leading edge
-  - `GAP_TOP_DISTANCE`: distance from the gap's top edge down to the bird
-  - `GAP_BOTTOM_DISTANCE`: distance from the bird down to the gap's bottom
-    edge
+  - `BIRD_Y`: bird's height within the playfield
+  - `BIRD_DY`: bird's vertical velocity (`dy / BIRD_MAX_FALL_SPEED`)
+  - `PIPE_DX`: horizontal distance to the next pair's leading edge
+  - `GAP_TOP`: distance from the gap's top edge down to the bird
+  - `GAP_LOW`: distance from the bird down to the gap's bottom edge
 - **Bias**: one extra node fixed at 1.
 - **Output (1)**: the bird flaps when it is above 0.5.
 

@@ -151,11 +151,11 @@ export function think(bird: Bird, pipes: Pipe[]): void {
   }
   // See Input in constants/neat.ts for what each input means
   const inputs: number[] = Array.from({ length: INPUT_COUNT }, () => 0);
-  inputs[Input.HEIGHT] = bird.y / PLAYFIELD_HEIGHT;
-  inputs[Input.VELOCITY] = bird.dy / BIRD_MAX_FALL_SPEED;
-  inputs[Input.PIPE_DISTANCE] = (pipe.x - bird.x) / CANVAS_WIDTH;
-  inputs[Input.GAP_TOP_DISTANCE] = (bird.y - pipe.gapY) / PLAYFIELD_HEIGHT;
-  inputs[Input.GAP_BOTTOM_DISTANCE] =
+  inputs[Input.BIRD_Y] = bird.y / PLAYFIELD_HEIGHT;
+  inputs[Input.BIRD_DY] = bird.dy / BIRD_MAX_FALL_SPEED;
+  inputs[Input.PIPE_DX] = (pipe.x - bird.x) / CANVAS_WIDTH;
+  inputs[Input.GAP_TOP] = (bird.y - pipe.gapY) / PLAYFIELD_HEIGHT;
+  inputs[Input.GAP_LOW] =
     (pipe.gapY + PIPE_GAP - (bird.y + BIRD_HEIGHT)) / PLAYFIELD_HEIGHT;
   // Get the output from the network and decide to flap or not!
   const [output] = feedForward(bird.brain, inputs);

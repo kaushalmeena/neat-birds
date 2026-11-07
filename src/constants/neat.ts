@@ -4,15 +4,15 @@
 // trained brain means, so bump SAVE_FILE_VERSION too.
 export const Input = {
   // Height of the bird within the playfield
-  HEIGHT: 0,
+  BIRD_Y: 0,
   // Vertical velocity (negative while rising)
-  VELOCITY: 1,
+  BIRD_DY: 1,
   // Horizontal distance to the next pipe pair's leading edge
-  PIPE_DISTANCE: 2,
+  PIPE_DX: 2,
   // Distance from the gap's top edge down to the bird's top
-  GAP_TOP_DISTANCE: 3,
+  GAP_TOP: 3,
   // Distance from the bird's bottom down to the gap's bottom edge
-  GAP_BOTTOM_DISTANCE: 4
+  GAP_LOW: 4
 } as const;
 
 // A bias node is added on top of these automatically
