@@ -12,7 +12,7 @@ import {
   BIRD_WIDTH,
   Wing
 } from "../constants/bird";
-import { INPUT_COUNT, OUTPUT_COUNT } from "../constants/neat";
+import { Input, INPUT_COUNT, OUTPUT_COUNT } from "../constants/neat";
 import {
   PIPE_GAP,
   PIPE_HEIGHT,
@@ -149,18 +149,14 @@ export function think(bird: Bird, pipes: Pipe[]): void {
   if (!pipe) {
     return;
   }
-  const inputs = [
-    // Height of the bird within the playfield
-    bird.y / PLAYFIELD_HEIGHT,
-    // Vertical velocity (negative while rising)
-    bird.dy / BIRD_MAX_FALL_SPEED,
-    // Horizontal distance to the pipe pair's leading edge
-    (pipe.x - bird.x) / CANVAS_WIDTH,
-    // Distance from the gap's top edge down to the bird's top
-    (bird.y - pipe.gapY) / PLAYFIELD_HEIGHT,
-    // Distance from the bird's bottom down to the gap's bottom edge
-    (pipe.gapY + PIPE_GAP - (bird.y + BIRD_HEIGHT)) / PLAYFIELD_HEIGHT
-  ];
+  // See Input in constants/neat.ts for what each input means
+  const inputs: number[] = Array.from({ length: INPUT_COUNT }, () => 0);
+  inputs[Input.HEIGHT] = bird.y / PLAYFIELD_HEIGHT;
+  inputs[Input.VELOCITY] = bird.dy / BIRD_MAX_FALL_SPEED;
+  inputs[Input.PIPE_DISTANCE] = (pipe.x - bird.x) / CANVAS_WIDTH;
+  inputs[Input.GAP_TOP_DISTANCE] = (bird.y - pipe.gapY) / PLAYFIELD_HEIGHT;
+  inputs[Input.GAP_BOTTOM_DISTANCE] =
+    (pipe.gapY + PIPE_GAP - (bird.y + BIRD_HEIGHT)) / PLAYFIELD_HEIGHT;
   // Get the output from the network and decide to flap or not!
   const [output] = feedForward(bird.brain, inputs);
   if (output > 0.5) {

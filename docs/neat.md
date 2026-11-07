@@ -11,13 +11,15 @@ Each bird's `brain` is a `Genome`: a list of node genes (input, bias, hidden,
 output) and connection genes (`from`, `to`, `weight`, `enabled`,
 `innovation`).
 
-- **Inputs (5)**, scaled to roughly -1..1 by `think()` in `bird.ts`, all
-  measured against the next pipe pair:
-  1. bird's height within the playfield
-  2. bird's vertical velocity (`dy / BIRD_MAX_FALL_SPEED`)
-  3. horizontal distance to the pair's leading edge
-  4. distance from the gap's top edge down to the bird
-  5. distance from the bird down to the gap's bottom edge
+- **Inputs (5)**, named by the `Input` constant in `src/constants/neat.ts`
+  (each value is its index and input node id), scaled to roughly -1..1 by
+  `think()` in `bird.ts`:
+  - `HEIGHT`: bird's height within the playfield
+  - `VELOCITY`: bird's vertical velocity (`dy / BIRD_MAX_FALL_SPEED`)
+  - `PIPE_DISTANCE`: horizontal distance to the next pair's leading edge
+  - `GAP_TOP_DISTANCE`: distance from the gap's top edge down to the bird
+  - `GAP_BOTTOM_DISTANCE`: distance from the bird down to the gap's bottom
+    edge
 - **Bias**: one extra node fixed at 1.
 - **Output (1)**: the bird flaps when it is above 0.5.
 
@@ -96,6 +98,7 @@ survivors count as dead too, so a perfect bird can't stall evolution.
 ## Tuning
 
 Change hyperparameters in `src/constants/neat.ts`. The population size is
-`BIRD_CREATE_LIMIT` in `src/constants/bird.ts`. Changing `INPUT_COUNT` or
-`OUTPUT_COUNT` also requires updating `think()` and makes existing save
-files incompatible (see [save-files.md](save-files.md)).
+`BIRD_CREATE_LIMIT` in `src/constants/bird.ts`. Adding or changing an
+`Input` (which sets `INPUT_COUNT`) or `OUTPUT_COUNT` also requires updating
+`think()` and makes existing save files incompatible (see
+[save-files.md](save-files.md)).
